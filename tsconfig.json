@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "module": "CommonJS",
+        "target": "ESNext",
+        "rootDir": "src",
+        "outDir": "dist",
+        "strict": true,
+        "esModuleInterop": true,
+        "noImplicitReturns": true,
+        "noUnusedParameters": false,
+        "sourceMap": true
+    },
+    "include": [
+        "src/**/*"
+    ]
+}

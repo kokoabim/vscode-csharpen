@@ -1,0 +1,10 @@
+.vscode/
+media/
+releases/
+src/
+
+.eslintrc.json
+.gitignore
+.vscodeignore
+tsconfig.json
+**/*.vsix

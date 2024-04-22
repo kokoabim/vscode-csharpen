@@ -1,0 +1,530 @@
+{
+    "name": "csharpen",
+    "publisher": "spencerjames",
+    "version": "0.0.1",
+    "description": "Sharpen (organize) C# files by ordering, sorting and regionalizing symbols.",
+    "displayName": "CSharpen — C# File Organizer",
+    "shortName": "CSharpen",
+    "author": {
+        "name": "Spencer James (kokoabim)",
+        "email": "dev@kokoabim.com",
+        "url": "https://swsj.me/"
+    },
+    "bugs": {
+        "url": "https://github.com/kokoabim/vscode-csharpen/issues",
+        "email": "dev@kokoabim.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/kokoabim/vscode-csharpen"
+    },
+    "license": "SEE LICENSE IN LICENSE.md",
+    "icon": "./dist/media/csharp-128px.png",
+    "engines": {
+        "vscode": "^1.80.0"
+    },
+    "homepage": "https://github.com/kokoabim/vscode-csharpen/blob/main/README.md",
+    "categories": [
+        "Formatters"
+    ],
+    "keywords": [
+        "c#",
+        "organize",
+        "format",
+        "csharp",
+        "sort"
+    ],
+    "activationEvents": [],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "category": "CSharpen",
+                "title": "Sharpen (Organize) C# File",
+                "command": "kokoabim.csharpen.sharpen-file",
+                "enablement": "editorLangId == 'csharp' && !editorReadonly"
+            },
+            {
+                "category": "CSharpen",
+                "title": "Remove Unused Usings",
+                "command": "kokoabim.csharpen.remove-unused-usings",
+                "enablement": "editorLangId == 'csharp' && !editorReadonly"
+            },
+            {
+                "category": "CSharpen",
+                "title": "Output File Diagnostics",
+                "command": "kokoabim.csharpen.output-file-diagnostics",
+                "enablement": "editorLangId != ''"
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "kokoabim.csharpen.sharpen-file",
+                "key": "shift+alt+cmd+f",
+                "when": "editorTextFocus && editorLangId == 'csharp'"
+            }
+        ],
+        "configuration": {
+            "title": "C# File Organizer (CSharpen)",
+            "properties": {
+                "csharpen.removeUnusedUsingsOnSharpen": {
+                    "order": 0,
+                    "markdownDescription": "Remove unused `using` directives on _sharpen_. There is a separate command to remove unused `using` directives.",
+                    "type": "boolean",
+                    "default": true
+                },
+                "csharpen.showFileSizeDifferenceOnSharpen": {
+                    "order": 1,
+                    "markdownDescription": "Show the file size difference (in characters) after _sharpening_. This is informational only.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "csharpen.formatDocumentOnSharpen": {
+                    "order": 2,
+                    "markdownDescription": "Perform the format document command before and after _sharpening_.\n\n**WARNING:** Leave this enabled to ensure parsing dependability. Disable only for debugging and advanced purposes.",
+                    "type": "boolean",
+                    "default": true
+                },
+                "csharpen.namespaceLevelOrganization": {
+                    "order": 3,
+                    "markdownDescription": "Namespace-level ordering, sorting and regionalization.\n\nAvailable properties (editing settings.json will provide IntelliSense popups): `ordering`, `typeSort`, `regionalization`, `regionThreshold`, `doNotRegionalizeMembersOf`, `doNotRegionalizeTypes`, `onlyRegionalizeMembersOf`, `onlyRegionalizeTypes`",
+                    "type": "object",
+                    "properties": {
+                        "ordering": {
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "access",
+                                    "name",
+                                    "type"
+                                ]
+                            }
+                        },
+                        "typeSort": {
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "delegate",
+                                    "interface",
+                                    "class",
+                                    "enum",
+                                    "struct",
+                                    "record",
+                                    "record struct"
+                                ]
+                            }
+                        },
+                        "regionalization": {
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "access",
+                                    "type"
+                                ]
+                            }
+                        },
+                        "regionThreshold": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "markdownDescription": "Number of members must exceed this threshold to be regionalized."
+                        },
+                        "doNotRegionalizeMembersOf": {
+                            "markdownDescription": "Do not regionalize members of specified types.",
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "class",
+                                    "interface",
+                                    "namespace",
+                                    "record",
+                                    "record struct",
+                                    "struct"
+                                ]
+                            }
+                        },
+                        "doNotRegionalizeTypes": {
+                            "markdownDescription": "Do not regionalize specified types.",
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "class",
+                                    "delegate",
+                                    "enum",
+                                    "interface",
+                                    "namespace",
+                                    "record",
+                                    "record struct",
+                                    "struct"
+                                ]
+                            }
+                        },
+                        "onlyRegionalizeMembersOf": {
+                            "markdownDescription": "Only regionalize members of specified types.",
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "class",
+                                    "interface",
+                                    "namespace",
+                                    "record",
+                                    "record struct",
+                                    "struct"
+                                ]
+                            }
+                        },
+                        "onlyRegionalizeTypes": {
+                            "markdownDescription": "Only regionalize specified types.",
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "class",
+                                    "delegate",
+                                    "enum",
+                                    "interface",
+                                    "namespace",
+                                    "record",
+                                    "record struct",
+                                    "struct"
+                                ]
+                            }
+                        }
+                    },
+                    "default": {
+                        "ordering": [
+                            "access",
+                            "type",
+                            "name"
+                        ],
+                        "typeSort": [
+                            "delegate",
+                            "interface",
+                            "class",
+                            "enum",
+                            "struct",
+                            "record",
+                            "record struct"
+                        ],
+                        "regionThreshold": 2
+                    }
+                },
+                "csharpen.typeLevelOrganization": {
+                    "order": 4,
+                    "markdownDescription": "Type-level (member and nested type) ordering. sorting and regionalization.\n\nAvailable properties (editing settings.json will provide IntelliSense popups): `ordering`, `typeSort`, `regionalization`, `regionThreshold`, `doNotRegionalizeMembersOf`, `doNotRegionalizeTypes`, `onlyRegionalizeMembersOf`, `onlyRegionalizeTypes`",
+                    "type": "object",
+                    "properties": {
+                        "ordering": {
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "access",
+                                    "name",
+                                    "type"
+                                ]
+                            }
+                        },
+                        "typeSort": {
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "class",
+                                    "constant",
+                                    "constructor",
+                                    "delegate",
+                                    "enum",
+                                    "event",
+                                    "field",
+                                    "finalizer",
+                                    "indexer",
+                                    "interface",
+                                    "method",
+                                    "operator",
+                                    "property",
+                                    "record",
+                                    "record struct",
+                                    "static constructor",
+                                    "struct"
+                                ]
+                            }
+                        },
+                        "regionalization": {
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "access",
+                                    "type"
+                                ]
+                            }
+                        },
+                        "regionThreshold": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "markdownDescription": "Number of members must exceed this threshold to be regionalized."
+                        },
+                        "doNotRegionalizeMembersOf": {
+                            "markdownDescription": "Do not regionalize members of specified types.",
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "class",
+                                    "interface",
+                                    "namespace",
+                                    "record",
+                                    "record struct",
+                                    "struct"
+                                ]
+                            }
+                        },
+                        "doNotRegionalizeTypes": {
+                            "markdownDescription": "Do not regionalize specified types.",
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "class",
+                                    "constant",
+                                    "constructor",
+                                    "delegate",
+                                    "enum",
+                                    "event",
+                                    "field",
+                                    "finalizer",
+                                    "indexer",
+                                    "interface",
+                                    "method",
+                                    "namespace",
+                                    "operator",
+                                    "property",
+                                    "record",
+                                    "record struct",
+                                    "static constructor",
+                                    "struct"
+                                ]
+                            }
+                        },
+                        "onlyRegionalizeMembersOf": {
+                            "markdownDescription": "Only regionalize members of specified types.",
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "class",
+                                    "interface",
+                                    "namespace",
+                                    "record",
+                                    "record struct",
+                                    "struct"
+                                ]
+                            }
+                        },
+                        "onlyRegionalizeTypes": {
+                            "markdownDescription": "Only regionalize specified types.",
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "class",
+                                    "constant",
+                                    "constructor",
+                                    "delegate",
+                                    "enum",
+                                    "event",
+                                    "field",
+                                    "finalizer",
+                                    "indexer",
+                                    "interface",
+                                    "method",
+                                    "namespace",
+                                    "operator",
+                                    "property",
+                                    "record",
+                                    "record struct",
+                                    "static constructor",
+                                    "struct"
+                                ]
+                            }
+                        }
+                    },
+                    "default": {
+                        "ordering": [
+                            "type",
+                            "access",
+                            "name"
+                        ],
+                        "typeSort": [
+                            "delegate",
+                            "event",
+                            "constant",
+                            "property",
+                            "field",
+                            "static constructor",
+                            "constructor",
+                            "indexer",
+                            "finalizer",
+                            "method",
+                            "operator",
+                            "interface",
+                            "class",
+                            "enum",
+                            "struct",
+                            "record",
+                            "record struct"
+                        ],
+                        "regionalization": [
+                            "type"
+                        ],
+                        "regionThreshold": 2,
+                        "onlyRegionalizeMembersOf": [
+                            "class"
+                        ],
+                        "onlyRegionalizeTypes": [
+                            "property",
+                            "field",
+                            "constant",
+                            "method"
+                        ]
+                    }
+                },
+                "csharpen.regionalizeInterfaceImplementations": {
+                    "order": 5,
+                    "markdownDescription": "Regionalize interface implementations by grouping them together within regions. Use `*` to indicate all supported.\n\n- Supported interfaces (including corresponding generic type): `IAsyncDisposable`, `ICloneable`, `ICollection`, `IComparable`, `IConvertible`, `IDisposable`, `IEnumerable`, `IEqualityComparer`, `IEquatable`, `IFormattable`, `IList`",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "uniqueItems": true,
+                        "enum": [
+                            "*",
+                            "IAsyncDisposable",
+                            "ICloneable",
+                            "ICollection",
+                            "IComparable",
+                            "IConvertible",
+                            "IDisposable",
+                            "IEnumerable",
+                            "IEqualityComparer",
+                            "IEquatable",
+                            "IFormattable",
+                            "IList"
+                        ]
+                    },
+                    "default": [
+                        "IDisposable"
+                    ]
+                },
+                "csharpen.fileFilters": {
+                    "order": 6,
+                    "markdownDescription": "Filter files (i.e. ignore) by name and content on _sharpen_.",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "fileName": {
+                                "type": "string",
+                                "description": "Regular expression pattern to match file name. (optional)"
+                            },
+                            "matchLogic": {
+                                "type": "boolean",
+                                "default": true,
+                                "description": "File filter is matched if `matchLogic` equals result of matching `pattern`."
+                            },
+                            "name": {
+                                "type": "string",
+                                "description": "File filter name."
+                            },
+                            "pattern": {
+                                "type": "string",
+                                "description": "Regular expression pattern to match file contents."
+                            },
+                            "reason": {
+                                "type": "string",
+                                "description": "Detailed reason for ignoring file. If not provided, `name` will be used as reason. (optional)"
+                            },
+                            "confirmOnDeny": {
+                                "type": "boolean",
+                                "description": "Prompt user to confirm an override when file is denied by filter."
+                            }
+                        },
+                        "required": [
+                            "name",
+                            "pattern"
+                        ]
+                    },
+                    "default": [
+                        {
+                            "fileName": "/[Pp]rogram\\.cs$",
+                            "matchLogic": false,
+                            "name": "ProgramClass",
+                            "pattern": "\\bclass\\s+Program\\s*\\{",
+                            "reason": "Program.cs requires a Program class"
+                        },
+                        {
+                            "fileName": "/[Pp]rogram\\.cs$",
+                            "matchLogic": false,
+                            "name": "ProgramClassMainMethod",
+                            "pattern": "\\bstatic\\s+(void|int|(System\\.)?Int32)\\s+Main\\s*\\(.*?\\)",
+                            "reason": "Program class requires a static Main method"
+                        },
+                        {
+                            "confirmOnDeny": true,
+                            "matchLogic": true,
+                            "name": "PreprocessorDirective:#elif",
+                            "pattern": "\\n\\s*?#elif\\s+.*?[\\r\\n]+",
+                            "reason": "Preprocessor directive #elif is detected. If outside of type members, it may cause unexpected behavior."
+                        },
+                        {
+                            "confirmOnDeny": true,
+                            "matchLogic": true,
+                            "name": "PreprocessorDirective:#else",
+                            "pattern": "\\n\\s*?#else\\s*?[\\r\\n]+",
+                            "reason": "Preprocessor directive #else is detected. If outside of type members, it may cause unexpected behavior."
+                        }
+                    ]
+                }
+            },
+            "menus": {
+                "editor/context": []
+            }
+        }
+    },
+    "scripts": {
+        "clean": "rimraf dist",
+        "compile": "tsc -p ./ && copyfiles ./media/csharp-128px.png ./dist/",
+        "lint": "eslint src --ext ts",
+        "pretest": "npm install && npm run compile && npm run lint",
+        "vscode:prepublish": "npm install && npm run compile && npm prune --omit=dev",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "@types/node": "^20.12.7",
+        "@types/vscode": "^1.80.0",
+        "@typescript-eslint/eslint-plugin": "^7.7.1",
+        "@typescript-eslint/parser": "^7.7.1",
+        "esbuild": "^0.20.2",
+        "eslint": "^8.57.0",
+        "typescript": "^5.4.5"
+    }
+}

@@ -1,0 +1,32 @@
+{
+    "files.exclude": {
+        "dist": false
+    },
+    "search.exclude": {
+        "dist": true
+    },
+    "typescript.tsc.autoDetect": "on",
+    "cSpell.ignoreWords": [
+        "SYSLIB",
+        "cctor",
+        "copyfiles",
+        "elif",
+        "nint",
+        "nuint",
+        "rogram"
+    ],
+    "cSpell.words": [
+        "Cloneable",
+        "csharpen",
+        "Formattable",
+        "Regionalizable",
+        "regionalization",
+        "regionalize",
+        "regionalized",
+        "regionalizing"
+    ],
+    "eslint.validate": [
+        "javascript",
+        "typescript",
+    ],
+}
