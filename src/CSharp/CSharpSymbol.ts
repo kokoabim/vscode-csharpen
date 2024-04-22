@@ -119,7 +119,6 @@ export class CSharpSymbol {
             : CSharpFile.zeroPosition;
 
         let currentBlockStart: vscode.Position | undefined;
-        let currentSymbol: CSharpSymbol | undefined;
         let previousBlockEnd = new vscode.Position(parentOrFileOpenedPosition.line, parentOrFileOpenedPosition.character);
         let previousSymbol: CSharpSymbol | undefined;
 
@@ -136,8 +135,8 @@ export class CSharpSymbol {
             previousSymbol = currentSymbol;
         }
 
-        if (currentSymbol && currentSymbol.range && currentSymbol.range.end.isBefore(parentOrFileEndPosition)) {
-            CSharpSymbol.createNonCodeblock(nonCodeblockSymbols, new vscode.Range(currentSymbol.range.end, parentOrFileEndPosition), currentSymbol, previousSymbol, parent);
+        if (previousSymbol && previousSymbol.range && previousSymbol.range.end.isBefore(parentOrFileEndPosition)) {
+            CSharpSymbol.createNonCodeblock(nonCodeblockSymbols, new vscode.Range(previousSymbol.range.end, parentOrFileEndPosition), undefined, previousSymbol, parent);
         }
 
         CSharpSymbol.moveCommentsFromNonCodeblockSymbols(symbols);
@@ -254,17 +253,20 @@ export class CSharpSymbol {
         return [symbols, strippedDocumentText];
     }
 
-    private static createNonCodeblock(nonCodeblockSymbols: CSharpSymbol[], range: vscode.Range, current: CSharpSymbol, previous?: CSharpSymbol, parent?: CSharpSymbol): void {
-        if (!current.getText(range)) return;
+    private static createNonCodeblock(nonCodeblockSymbols: CSharpSymbol[], range: vscode.Range, current?: CSharpSymbol, previous?: CSharpSymbol, parent?: CSharpSymbol): void {
+        const anySymbol = current ?? previous;
+        if (!anySymbol) return;
+
+        if (!anySymbol.getText(range)) return;
 
         const symbol = new CSharpSymbol();
-        symbol.range = CSharpSymbol.toStartOfLineOrWhitespace(current.textDocument!, range);
-        symbol.body = current.getText(symbol.range)!;
-        symbol.name = `${previous ? `${previous.name}:` : ""}NonCodeblock:${current.name}`;
-        symbol.namespace = current.namespace;
+        symbol.range = CSharpSymbol.toStartOfLineOrWhitespace(anySymbol.textDocument!, range);
+        symbol.body = anySymbol.getText(symbol.range)!;
+        symbol.name = `${previous ? `${previous.name}:` : ""}NonCodeblock:${anySymbol.name}`;
+        symbol.namespace = anySymbol.namespace;
         symbol.parent = parent;
         symbol.position = symbol.range.start;
-        symbol.textDocument = current.textDocument;
+        symbol.textDocument = anySymbol.textDocument;
         symbol.type = CSharpSymbolType.nonCodeblock;
 
         if (previous) {
@@ -272,8 +274,10 @@ export class CSharpSymbol {
             symbol.link.before = previous;
         }
 
-        current.link.before = symbol;
-        symbol.link.after = current;
+        if (current) { // there is no 'current' if this is after the last symbol ('current's follow previous non-codeblock symbols)
+            current.link.before = symbol;
+            symbol.link.after = current;
+        }
 
         nonCodeblockSymbols.push(symbol);
     }
@@ -374,16 +378,28 @@ export class CSharpSymbol {
     }
 
     private static moveCommentsFromNonCodeblockSymbols(symbols: CSharpSymbol[]): void {
-        for (const symbol of symbols.filter(s => s.type !== CSharpSymbolType.nonCodeblock && s.link.before?.type === CSharpSymbolType.nonCodeblock)) {
-            const stringSpans = CSharpSymbol.extractSymbolText(symbol.link.before!, [CSharpPatterns.multiLineCommentRegExp, CSharpPatterns.xmlCommentRegExp, CSharpPatterns.singleLineCommentRegExp], true);
-            if (stringSpans.length > 0) {
-                stringSpans[stringSpans.length - 1].value = stringSpans[stringSpans.length - 1].value.trimEndLine();
-                symbol.insertOnHeader(stringSpans.map(c => c.value).join("\n"));
+        for (const symbol of symbols.filter(s => s.link.before?.type === CSharpSymbolType.nonCodeblock)) {
+            if (moveComments(symbol, symbol.link.before!, true)) symbol.link.before = undefined;
+        }
 
-                if (symbol.link.before!.isBodyWhitespace()) symbol.link.before = undefined;
-            }
+        const lastSymbol = symbols[symbols.length - 1];
+        if (lastSymbol.link.after?.type === CSharpSymbolType.nonCodeblock) {
+            if (moveComments(lastSymbol, lastSymbol.link.after!, false)) lastSymbol.link.after = undefined;
+        }
 
-            if (symbol.hasChildren) CSharpSymbol.moveCommentsFromNonCodeblockSymbols(symbol.children);
+        symbols.forEach(s => {
+            if (s.hasChildren) CSharpSymbol.moveCommentsFromNonCodeblockSymbols(s.children);
+        });
+
+        function moveComments(symbol: CSharpSymbol, nonCodeblockSymbol: CSharpSymbol, isBefore: boolean): boolean {
+            const stringSpans = CSharpSymbol.extractSymbolText(nonCodeblockSymbol, [CSharpPatterns.multiLineCommentRegExp, CSharpPatterns.xmlCommentRegExp, CSharpPatterns.singleLineCommentRegExp], true);
+            if (stringSpans.length === 0) return false;
+
+            stringSpans[stringSpans.length - 1].value = stringSpans[stringSpans.length - 1].value.trimEndLine();
+            if (isBefore) symbol.insertOnHeader(stringSpans.map(c => c.value).join("\n"));
+            else symbol.appendToFooter(stringSpans.map(c => c.value).join("\n"));
+
+            return nonCodeblockSymbol.isBodyWhitespace();
         }
     }
 
@@ -523,7 +539,8 @@ export class CSharpSymbol {
     private static parseCodeBeforeSymbolName(symbol: CSharpSymbol, code: string): boolean {
         const afterAttributesAndModifiersIndex = CSharpSymbol.parseAttributesAndModifiers(symbol, code);
 
-        const symbolNameIndex = code.indexOf(symbol.name, afterAttributesAndModifiersIndex);
+        const symbolName = symbol.name.includes(".") ? symbol.name.split(".").pop() : symbol.name; // following two lines is a workaround for explicit interface implementations
+        const symbolNameIndex = code.indexOfMatch(`(${CSharpPatterns.typeWithGen}\\.)?${symbolName}`, afterAttributesAndModifiersIndex);
         if (symbolNameIndex === -1) return false; // not a failure but rather scenario doesn't apply here
 
         let codeBeforeSymbolName = "";
@@ -584,7 +601,14 @@ export class CSharpSymbol {
                 if (finalizerMatch?.groups?.name) name = finalizerMatch.groups.name;
                 break;
 
-            default:
+            case CSharpSymbolType.namespace:
+            case CSharpSymbolType.delegate:
+            case CSharpSymbolType.interface:
+            case CSharpSymbolType.class:
+            case CSharpSymbolType.struct:
+            case CSharpSymbolType.enum:
+            case CSharpSymbolType.recordClass:
+            case CSharpSymbolType.recordStruct:
                 const match = symbol.fullName.match(`^((?<namespace>(${CSharpPatterns.typeWithGen}\\.)*${CSharpPatterns.typeWithGen})\\.)?(?<name>${CSharpPatterns.typeWithGen})$`);
                 if (match?.groups?.name) name = match.groups.name;
                 if (match?.groups?.namespace) namespace = match.groups.namespace;
@@ -693,7 +717,7 @@ export class CSharpSymbol {
             case vscode.SymbolKind.Constant: return CSharpSymbolType.constant;
 
             case vscode.SymbolKind.Property:
-                if (documentSymbol.name === "this[]") return CSharpSymbolType.indexer;
+                if (documentSymbol.name.endsWith("this[]")) return CSharpSymbolType.indexer;
                 else return CSharpSymbolType.property;
 
             case vscode.SymbolKind.Field: return CSharpSymbolType.field;

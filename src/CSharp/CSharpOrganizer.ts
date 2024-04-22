@@ -60,21 +60,28 @@ export class CSharpOrganizer {
         if (classes.length === 0) return;
 
         for (const c of classes) {
+            const interfacesRegionalized: string[] = [];
+
             for (const i of settings.regionalizeInterfaceImplementations) {
                 if (/* non-generic */((CSharpenVSCodeExtensionSettings.regionalizableInterfaceImplementations.includes(i)) && c.doesImplement(i, false, symbols))
                     ||
                     /* generic */ ((CSharpenVSCodeExtensionSettings.regionalizableGenericInterfaceImplementations.includes(i)) && c.doesImplement(i, true, symbols))
                 ) {
-                    CSharpOrganizer.regionalizeInterface(i, c);
+                    CSharpOrganizer.regionalizeInterface(i, c, interfacesRegionalized);
                 }
             }
         }
     }
 
-    private static regionalizeInterface(regionName: string, symbol: CSharpSymbol): void {
+    private static regionalizeInterface(interfaceName: string, symbol: CSharpSymbol, interfacesRegionalized: string[], regionName?: string): void {
+        if (interfacesRegionalized.includes(interfaceName)) return;
+        interfacesRegionalized.push(interfaceName);
+
         const regionSymbols: CSharpSymbol[] = [];
 
-        if (regionName.match(/^I(Async)?Disposable$/)) {
+        if (interfaceName.match(/^I(Async)?Disposable$/)) {
+            regionName ??= interfaceName;
+
             const field = symbol.children.filter(s => s.type === CSharpSymbolType.field && s.name.match(/^_?(is)?disposed$/i) && CSharpType.fromString(s.returnType) === CSharpType.bool);
             if (field.length === 1) regionSymbols.push(field[0]);
 
@@ -84,18 +91,27 @@ export class CSharpOrganizer {
             const methods = symbol.children.filter(s => s.type === CSharpSymbolType.method && s.name.match(/^((.*?\.)?I(Async)?Disposable\.)?Dispose(Async)?$/));
             if (methods.length > 0) regionSymbols.push(...methods);
         }
-        else if (regionName === "ICollection") {
+        else if (interfaceName === "ICollection") {
+            regionName ??= interfaceName;
+
             const properties = symbol.children.filter(s => s.type === CSharpSymbolType.property && s.name.match(/^((.*?\.)?ICollection(<.*?>)?\.)?(Count|IsReadOnly|IsSynchronized|SyncRoot)$/));
             if (properties.length > 0) regionSymbols.push(...properties);
 
             const methods = symbol.children.filter(s => s.type === CSharpSymbolType.method && s.name.match(/^((.*?\.)?ICollection(<.*?>)?\.)?(Add|Clear|Contains|CopyTo|Remove)$/));
             if (methods.length > 0) regionSymbols.push(...methods);
+
+            // this interface implements...
+            CSharpOrganizer.regionalizeInterface("IEnumerable", symbol, interfacesRegionalized, regionName);
         }
-        else if (regionName === "IConvertible") {
+        else if (interfaceName === "IConvertible") {
+            regionName ??= interfaceName;
+
             const methods = symbol.children.filter(s => s.type === CSharpSymbolType.method && s.name.match(/^((.*?\.)?IConvertible\.)?(GetTypeCode|To(Boolean|Byte|Char|DateTime|Decimal|Double|Int16|Int32|Int64|SByte|Single|String|Type|UInt16|UInt32|UInt64))$/));
             if (methods.length > 0) regionSymbols.push(...methods);
         }
-        else if (regionName === "IList") {
+        else if (interfaceName === "IList") {
+            regionName ??= interfaceName;
+
             const properties = symbol.children.filter(s => s.type === CSharpSymbolType.property && s.name.match(/^((.*?\.)?IList(<.*?>)?\.)?(IsFixedSize|IsReadOnly)$/));
             if (properties.length > 0) regionSymbols.push(...properties);
 
@@ -104,34 +120,37 @@ export class CSharpOrganizer {
 
             const methods = symbol.children.filter(s => s.type === CSharpSymbolType.method && s.name.match(/^((.*?\.)?IList(<.*?>)?\.)?(Add|Clear|Contains|IndexOf|Insert|Remove|RemoveAt)$/));
             if (methods.length > 0) regionSymbols.push(...methods);
+
+            // this interface implements...
+            CSharpOrganizer.regionalizeInterface("ICollection", symbol, interfacesRegionalized, regionName);
         }
         else {
-            if (regionName === "ICloneable") {
+            if (interfaceName === "ICloneable") {
                 const method = symbol.children.find(s => s.type === CSharpSymbolType.method && s.name.match(/^((.*?\.)?ICloneable\.)?Clone$/));
                 if (method) regionSymbols.push(method);
             }
-            else if (regionName === "IComparable") {
+            else if (interfaceName === "IComparable") {
                 const methods = symbol.children.filter(s => s.type === CSharpSymbolType.method && s.name.match(/^((.*?\.)?IComparable(<.*?>)?\.)?CompareTo$/));
                 if (methods.length > 0) regionSymbols.push(...methods);
             }
-            else if (regionName === "IEnumerable") {
+            else if (interfaceName === "IEnumerable") {
                 const methods = symbol.children.filter(s => s.type === CSharpSymbolType.method && s.name.match(/^((.*?\.)?IEnumerable(<.*?>)?\.)?GetEnumerator$/));
                 if (methods.length > 0) regionSymbols.push(...methods);
             }
-            else if (regionName === "IEqualityComparer") {
+            else if (interfaceName === "IEqualityComparer") {
                 const methods = symbol.children.filter(s => s.type === CSharpSymbolType.method && s.name.match(/^((.*?\.)?IEqualityComparer(<.*?>)?\.)?(Equals|GetHashCode)$/));
                 if (methods.length > 0) regionSymbols.push(...methods);
             }
-            else if (regionName === "IEquatable") {
+            else if (interfaceName === "IEquatable") {
                 const method = symbol.children.find(s => s.type === CSharpSymbolType.method && s.name.match(/^((.*?\.)?IEquatable(<.*?>)?\.)?Equals$/));
                 if (method) regionSymbols.push(method);
             }
-            else if (regionName === "IFormattable") {
+            else if (interfaceName === "IFormattable") {
                 const method = symbol.children.find(s => s.type === CSharpSymbolType.method && s.name.match(/^((.*?\.)?IFormattable\.)?ToString$/));
                 if (method) regionSymbols.push(method);
             }
 
-            regionName = "interfaces"; // all above interfaces share this region
+            regionName ??= "interfaces"; // in this else-block, all interfaces share a region, unless 'regionName' has been specified
         }
 
         if (regionSymbols.length > 0) {

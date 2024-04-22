@@ -87,6 +87,10 @@ export class CSharpenVSCodeExtensionSettings extends VSCodeExtensionSettings {
             else if (settings.regionalizeInterfaceImplementations.includes("ICollection")) settings.regionalizeInterfaceImplementations = [...new Set(settings.regionalizeInterfaceImplementations.concat(...["IEnumerable"]))];
         }
 
+        if (settings.regionalizeInterfaceImplementations.includes("IDisposable") && settings.regionalizeInterfaceImplementations.includes("IAsyncDisposable")) {
+            settings.regionalizeInterfaceImplementations.splice(settings.regionalizeInterfaceImplementations.indexOf("IAsyncDisposable"), 1); // IAsyncDisposable is covered by IDisposable
+        }
+
         CSharpenVSCodeExtensionSettings.assignFromConfiguration(settings.namespaceLevelOrganization, settings.get<CSharpOrganizeSettings>("namespaceLevelOrganization"));
         CSharpenVSCodeExtensionSettings.assignFromConfiguration(settings.typeLevelOrganization, settings.get<CSharpOrganizeSettings>("typeLevelOrganization"));
     }
