@@ -74,7 +74,7 @@ export class CSharpOrganizer {
     }
 
     private static regionalizeInterface(interfaceName: string, symbol: CSharpSymbol, interfacesRegionalized: string[], regionName?: string): void {
-        if (interfacesRegionalized.includes(interfaceName)) return;
+        if (interfacesRegionalized.includes(interfaceName) || (interfaceName.match(/^I(Async)?Disposable$/) && interfacesRegionalized.anyMatches(/^I(Async)?Disposable$/))) return;
         interfacesRegionalized.push(interfaceName);
 
         const regionSymbols: CSharpSymbol[] = [];
