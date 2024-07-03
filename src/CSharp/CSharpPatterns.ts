@@ -17,7 +17,7 @@ export class CSharpPatterns {
     static readonly namespaceDeclarationWithBodyRegExp = new RegExp(`^(?<declaration>(?<signature>[ \\t]*namespace\\s+(?<namespace>${CSharpPatterns.namespace}))\\s*\\{.*?\\}\\s*)`, "gms");
     static readonly nonNewLine = new RegExp("[^\\r\\n]", "g");
     static readonly openPreprocessorDirectives = new RegExp("^(?<text>[ \\t]*#[ \\t]*(if|pragma).*?)\\r?\\n", "gm");
-    static readonly singleLineCommentRegExp = new RegExp("^[ \\t]*(?<text>//.*?[\\r\\n]*)$", "gm");
+    static readonly singleLineCommentRegExp = new RegExp("^(?<text>[ \\t]*//.*?[\\r\\n]*)$", "gm");
     static readonly symbolTypeKeywords = `(?<keywords>(interface|record(\\s+class)?|class|record(\\s+struct)?|struct|enum))`;
     static readonly symbolTypeOnlyWithReturnTypeFirst = `(?<returnType>${this.anyType})\\s+(?<symbolType>operator)`;
     static readonly symbolTypeOnlyWithReturnTypeLast = `(?<symbolType>\\s*(delegate|event|const|(explicit|implicit)\\s+operator))\\s+(?<returnType>${this.anyType})`;

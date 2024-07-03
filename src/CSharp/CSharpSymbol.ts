@@ -393,7 +393,7 @@ export class CSharpSymbol {
 
         function moveComments(symbol: CSharpSymbol, nonCodeblockSymbol: CSharpSymbol, isBefore: boolean): boolean {
             const stringSpans = CSharpSymbol.extractSymbolText(nonCodeblockSymbol, [CSharpPatterns.multiLineCommentRegExp, CSharpPatterns.xmlCommentRegExp, CSharpPatterns.singleLineCommentRegExp], true);
-            if (stringSpans.length === 0) return false;
+            if (stringSpans.length === 0) return nonCodeblockSymbol.isBodyWhitespace();
 
             stringSpans[stringSpans.length - 1].value = stringSpans[stringSpans.length - 1].value.trimEndLine();
             if (isBefore) symbol.insertOnHeader(stringSpans.map(c => c.value).join("\n"));
