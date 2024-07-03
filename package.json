@@ -485,7 +485,7 @@
                             "fileName": "/[Pp]rogram\\.cs$",
                             "matchLogic": false,
                             "name": "ProgramClassMainMethod",
-                            "pattern": "\\bstatic\\s+(void|int|(System\\.)?Int32)\\s+Main\\s*\\(.*?\\)",
+                            "pattern": "\\bstatic\\s+((void)|(int)|((System\\.)?Int32)|(async\\s+Task(<((int)|((System\\.)?Int32))>)?))\\s+Main\\s*\\(.*?\\)",
                             "reason": "Program class requires a static Main method"
                         },
                         {
