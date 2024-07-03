@@ -1,7 +1,7 @@
 {
     "name": "csharpen",
     "publisher": "spencerjames",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "Sharpen (organize) C# files by ordering, sorting and regionalizing symbols.",
     "displayName": "CSharpen — C# File Organizer",
     "shortName": "CSharpen",
@@ -519,12 +519,12 @@
         "watch": "tsc -watch -p ./"
     },
     "devDependencies": {
-        "@types/node": "^20.12.7",
+        "@types/node": "^20.14.9",
         "@types/vscode": "^1.80.0",
-        "@typescript-eslint/eslint-plugin": "^7.7.1",
-        "@typescript-eslint/parser": "^7.7.1",
+        "@typescript-eslint/eslint-plugin": "^7.15.0",
+        "@typescript-eslint/parser": "^7.15.0",
         "esbuild": "^0.20.2",
         "eslint": "^8.57.0",
-        "typescript": "^5.4.5"
+        "typescript": "^5.5.3"
     }
 }
