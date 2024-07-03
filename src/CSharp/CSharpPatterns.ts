@@ -8,7 +8,7 @@ export class CSharpPatterns {
     static readonly tupleType = `(\\(${CSharpPatterns.typeWithGenNullArr}(,\\s*${CSharpPatterns.typeWithGenNullArr})+\\)${CSharpPatterns._nullArr})`;
     static readonly anyType = `(${CSharpPatterns.typeWithGenNullArr}|${CSharpPatterns.tupleType})`;
 
-    static readonly attributes = `(?<attributes>(\\s*\\[${CSharpPatterns.typeWithGen}.*?\\]\\s*)*)?`;
+    static readonly attributes = `(?<attributes>\\s*\\[.+\\n?)?`;
     static readonly closePreprocessorDirectives = new RegExp("^(?<text>[ \\t]*#[ \\t]*(endif|pragma).*?)\\r?\\n", "gm");
     static readonly implementsRegExp = new RegExp(`\\s*(?<type>${CSharpPatterns.anyType})(\\s*,\\s*)?`, "g");
     static readonly modifiers = "(?<modifiers>(\\s*(new|public|protected|private|internal|protected\\s+internal|private\\s+protected|file|static|extern|virtual|partial|abstract|sealed|override|readonly|unsafe|volatile|async)\\s+)*)?";
