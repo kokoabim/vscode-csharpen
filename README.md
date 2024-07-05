@@ -107,6 +107,10 @@ If you're curious, the [C# specification grammar](https://learn.microsoft.com/en
 
 # Release Notes / Changelog
 
+#### 2024-07-04 — 0.0.4
+
+- Fixed minor issue with handling attributes
+
 #### 2024-07-03 — 0.0.3
 
 - Fixed issue with handling `using` directives which subsequently caused issues with handling single-line comments
