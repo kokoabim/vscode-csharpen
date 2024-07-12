@@ -19,7 +19,7 @@ export class CSharpFile {
 
     private constructor(public readonly textDocument: vscode.TextDocument) {
         this.filePath = vscode.workspace.asRelativePath(textDocument.uri);
-        this.name = FileSystem.fileName(textDocument);
+        this.name = FileSystem.fileNameUsingTextDocument(textDocument);
         this.textDocument = textDocument;
     }
 
@@ -35,12 +35,17 @@ export class CSharpFile {
         return csharpFile;
     }
 
-    static getFileDiagnostics(document: vscode.TextDocument): FileDiagnostic[] {
-        return vscode.languages.getDiagnostics(document.uri).filter(d => !d.source || d.source === "csharp").map(d => new FileDiagnostic(FileSystem.fileName(document), d));
+    static getFileDiagnosticsUsingTextDocument(document: vscode.TextDocument): FileDiagnostic[] {
+        // ? TODO: Use instead?: return vscode.languages.getDiagnostics(document.uri).filter(d => !d.source || d.source === "csharp").map(d => new FileDiagnostic(FileSystem.fileName(document), d));
+        return vscode.languages.getDiagnostics(document.uri).map(d => new FileDiagnostic(FileSystem.fileNameUsingTextDocument(document), d));
+    }
+
+    static getFileDiagnosticsUsingUri(uri: vscode.Uri): FileDiagnostic[] {
+        return vscode.languages.getDiagnostics(uri).map(d => new FileDiagnostic(FileSystem.fileNameUsingUri(uri), d));
     }
 
     static async removeUnusedUsings(textEditor: vscode.TextEditor, textDocument: vscode.TextDocument): Promise<boolean> {
-        const fileDiagnostics = this.getFileDiagnostics(textDocument);
+        const fileDiagnostics = this.getFileDiagnosticsUsingTextDocument(textDocument);
         const unusedUsings = fileDiagnostics.filter(d => d.identifier === FileDiagnosticIdentifier.usingDirectiveUnnecessary);
         if (unusedUsings.length === 0) return Promise.resolve(false);
 
@@ -63,7 +68,7 @@ export class CSharpFile {
     }
 
     [util.inspect.custom](): string {
-        return `${CSharpSymbolType[this.type]}${this.hasChildren ? `[${this.children.length}]` : ""}: ${FileSystem.fileName(this.textDocument)}`;
+        return `${CSharpSymbolType[this.type]}${this.hasChildren ? `[${this.children.length}]` : ""}: ${FileSystem.fileNameUsingTextDocument(this.textDocument)}`;
     }
 
     debug(): void {

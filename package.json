@@ -1,7 +1,7 @@
 {
     "name": "csharpen",
     "publisher": "spencerjames",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "description": "Sharpen (organize) C# files by ordering, sorting and regionalizing symbols.",
     "displayName": "CSharpen — C# File Organizer",
     "shortName": "CSharpen",
@@ -503,6 +503,23 @@
                             "reason": "Preprocessor directive #else is detected. If outside of type members, it may cause unexpected behavior."
                         }
                     ]
+                },
+                "csharpen.quickFixFilters": {
+                    "markdownDescription": "Patterns to filter out QuickFix titles when outputting file diagnostics.",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "uniqueItems": true
+                    },
+                    "default": [
+                        "^Fix All",
+                        "^Suppress or configure issues",
+                        "^Convert to block scoped namespace",
+                        "^Use primary constructor",
+                        "^Add braces",
+                        "^Use block body for method",
+                        "^Use explicit type instead of 'var'"
+                    ]
                 }
             },
             "menus": {
@@ -526,5 +543,8 @@
         "esbuild": "^0.20.2",
         "eslint": "^8.57.0",
         "typescript": "^5.5.3"
+    },
+    "dependencies": {
+        "glob": "^11.0.0"
     }
 }

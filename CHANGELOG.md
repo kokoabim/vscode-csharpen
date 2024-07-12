@@ -1,5 +1,9 @@
 ## ⍺ Alpha
 
+#### 2024-07-11 — 0.0.5
+
+- Added output of Quick Fixes to the `Output File Diagnostics` command
+
 #### 2024-07-04 — 0.0.4
 
 - Fixed minor issue with handling attributes

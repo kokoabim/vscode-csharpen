@@ -22,6 +22,10 @@ export abstract class VSCodeExtension {
         commands.forEach(c => this.context.subscriptions.push(vscode.commands.registerCommand(c.name, c.command)));
     }
 
+    protected clearOutput(): void {
+        this.outputChannel.clear();
+    }
+
     protected async error(message: string): Promise<void> {
         await vscode.window.showErrorMessage(`${this.shortName}: ${message}`);
     }

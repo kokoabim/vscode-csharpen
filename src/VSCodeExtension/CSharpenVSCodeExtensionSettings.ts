@@ -31,6 +31,7 @@ export class CSharpenVSCodeExtensionSettings extends VSCodeExtensionSettings {
     formatDocumentOnSharpen = true;
     indentation!: string;
     namespaceLevelOrganization = new CSharpOrganizeSettings();
+    quickFixFilters: string[] = [];
     regionalizeInterfaceImplementations: string[] = [];
     removeUnusedUsingsOnSharpen = true;
     showFileSizeDifferenceOnSharpen = false;
@@ -75,6 +76,7 @@ export class CSharpenVSCodeExtensionSettings extends VSCodeExtensionSettings {
         if (fileFilters) settings.fileFilters = fileFilters.map(ff => new FileFilter(ff));
 
         settings.formatDocumentOnSharpen = settings.get<boolean>("formatDocumentOnSharpen") ?? true;
+        settings.quickFixFilters = settings.get<string[]>("quickFixFilters") ?? [];
         settings.regionalizeInterfaceImplementations = settings.get<string[]>("regionalizeInterfaceImplementations") ?? [];
         settings.removeUnusedUsingsOnSharpen = settings.get<boolean>("removeUnusedUsingsOnSharpen") ?? true;
         settings.showFileSizeDifferenceOnSharpen = settings.get<boolean>("showFileSizeDifferenceOnSharpen") ?? false;
