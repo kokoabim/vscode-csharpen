@@ -81,7 +81,7 @@ export class CSharpSymbol {
 
     static create(textDocument: vscode.TextDocument, documentSymbol: vscode.DocumentSymbol, parent?: CSharpSymbol): CSharpSymbol {
         const symbol = new CSharpSymbol();
-        symbol.range = CSharpSymbol.toStartOfLineOrWhitespace(textDocument, documentSymbol.range);
+        symbol.range = CSharpSymbol.adjustRange(textDocument, documentSymbol.range, documentSymbol.kind);
         symbol.body = textDocument.getText(symbol.range);
         symbol.fullName = documentSymbol.detail; // FQDN-class name; method name (not FQDN) and parameters; property name
         symbol.name = documentSymbol.name;
@@ -194,6 +194,29 @@ export class CSharpSymbol {
         return textDocument.positionAt(textDocument.offsetAt(position) + offset);
     }
 
+    private static adjustRange(textDocument: vscode.TextDocument, range: vscode.Range, kindOrType: vscode.SymbolKind | CSharpSymbolType): vscode.Range {
+        const previousNewLineOrBlockChars = "\n\r};";
+        const whitespaceChars = " \t";
+
+        const text = textDocument.getText();
+        const length = text.length;
+
+        let startIndex = textDocument.offsetAt(range.start);
+        if (kindOrType === vscode.SymbolKind.Event || kindOrType === CSharpSymbolType.event) {
+            while (startIndex > 0 && !previousNewLineOrBlockChars.includes(text[startIndex])) startIndex--;
+            startIndex++;
+
+        }
+        else while (startIndex > 0 && whitespaceChars.includes(text[startIndex])) startIndex--;
+
+        if (kindOrType !== vscode.SymbolKind.Event && kindOrType !== CSharpSymbolType.event) return range.with({ start: textDocument.positionAt(startIndex) });
+
+        let endIndex = textDocument.offsetAt(range.end);
+        while (endIndex < length && text[endIndex] !== ";") endIndex++;
+
+        return new vscode.Range(textDocument.positionAt(startIndex), textDocument.positionAt(endIndex + 1));
+    }
+
     private static comparePosition(a: CSharpSymbol, b: CSharpSymbol): number {
         if (!a.position || !b.position) return 0;
         return a.position.compareTo(b.position) ?? 0;
@@ -260,7 +283,7 @@ export class CSharpSymbol {
         if (!anySymbol.getText(range)) return;
 
         const symbol = new CSharpSymbol();
-        symbol.range = CSharpSymbol.toStartOfLineOrWhitespace(anySymbol.textDocument!, range);
+        symbol.range = CSharpSymbol.adjustRange(anySymbol.textDocument!, range, CSharpSymbolType.nonCodeblock);
         symbol.body = anySymbol.getText(symbol.range)!;
         symbol.name = `${previous ? `${previous.name}:` : ""}NonCodeblock:${anySymbol.name}`;
         symbol.namespace = anySymbol.namespace;
@@ -552,7 +575,7 @@ export class CSharpSymbol {
             if (!documentTextLine) throw new Error("Symbol declaration that requires special parsing does not have a document text line. This is not supported. Please report a bug with example code.");
 
             let actualRange = new vscode.Range(new vscode.Position(documentTextLine.range.start.line, documentTextLine.firstNonWhitespaceCharacterIndex), documentTextLine.range.end);
-            actualRange = CSharpSymbol.toStartOfLineOrWhitespace(symbol.textDocument!, actualRange);
+            actualRange = CSharpSymbol.adjustRange(symbol.textDocument!, actualRange, symbol.type);
 
             const actualBody = symbol.getText(actualRange);
             if (!actualBody) throw new Error("Symbol declaration that requires special parsing does not have document text of range. This is not supported. Please report a bug with example code.");
@@ -756,14 +779,6 @@ export class CSharpSymbol {
 
             default: throw new Error(`Unknown symbol type string: ${string}`);
         }
-    }
-
-    private static toStartOfLineOrWhitespace(textDocument: vscode.TextDocument, range: vscode.Range): vscode.Range {
-        const whitespaceChars = " \t";
-        const documentText = textDocument.getText(new vscode.Range(CSharpFile.zeroPosition, range.start));
-        let index = documentText.length - 1;
-        while (index > 0 && whitespaceChars.includes(documentText[index])) index--;
-        return range.with({ start: textDocument.positionAt(index + 1) });
     }
 
     private appendToFooter(text: string): void {

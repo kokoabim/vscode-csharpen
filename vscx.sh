@@ -188,9 +188,13 @@ fi
 # build
 
 if [[ "$action" =~ ^build.*$ ]]; then
+    npm prune --omit=dev || end "Failed to build package" 1
+
     vsce package -o "$pkg_file" || end "Failed to build package" 1
     [[ -f "$pkg_file" ]] || end "File not found: $pkg_file" 1
     echo "Package built: $pkg_file"
+
+    npm install || true # replace omitted dev dependencies
 fi
 
 # install

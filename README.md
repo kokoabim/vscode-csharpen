@@ -107,6 +107,10 @@ If you're curious, the [C# specification grammar](https://learn.microsoft.com/en
 
 # Release Notes / Changelog
 
+#### 2024-07-27 — 0.0.6
+
+- Fixed issue with handling `event` declarations
+
 #### 2024-07-11 — 0.0.5
 
 - Added output of Quick Fixes to the `Output File Diagnostics` command
