@@ -1,5 +1,9 @@
 ## ⍺ Alpha
 
+#### 2024-07-28 — 0.0.8
+
+- Made sure all settings have defaults.
+
 #### 2024-07-27 — 0.0.7
 
 - Fixed issue with handling classes outside of namespaces

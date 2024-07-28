@@ -1,7 +1,7 @@
 {
     "name": "csharpen",
     "publisher": "spencerjames",
-    "version": "0.0.7",
+    "version": "0.0.8",
     "description": "Sharpen (organize) C# files by ordering, sorting and regionalizing symbols.",
     "displayName": "CSharpen — C# File Organizer",
     "shortName": "CSharpen",
@@ -69,15 +69,15 @@
             "properties": {
                 "csharpen.removeUnusedUsingsOnSharpen": {
                     "order": 0,
-                    "markdownDescription": "Remove unused `using` directives on _sharpen_. There is a separate command to remove unused `using` directives.",
+                    "markdownDescription": "Remove unused `using` directives on _sharpen_. Note that there is a dedicated command to remove unused `using` directives.",
                     "type": "boolean",
                     "default": true
                 },
                 "csharpen.showFileSizeDifferenceOnSharpen": {
                     "order": 1,
-                    "markdownDescription": "Show the file size difference (in characters) after _sharpening_. This is informational only.",
+                    "markdownDescription": "Show the file size difference (in characters) after _sharpening_.",
                     "type": "boolean",
-                    "default": false
+                    "default": true
                 },
                 "csharpen.formatDocumentOnSharpen": {
                     "order": 2,
@@ -87,7 +87,7 @@
                 },
                 "csharpen.namespaceLevelOrganization": {
                     "order": 3,
-                    "markdownDescription": "Namespace-level ordering, sorting and regionalization.\n\nAvailable properties (editing settings.json will provide IntelliSense popups): `ordering`, `typeSort`, `regionalization`, `regionThreshold`, `doNotRegionalizeMembersOf`, `doNotRegionalizeTypes`, `onlyRegionalizeMembersOf`, `onlyRegionalizeTypes`",
+                    "markdownDescription": "Namespace-level ordering, sorting and regionalization.\n\nAvailable properties (editing settings.json will provide IntelliSense popups): `ordering`, `typeSort`, `regionalization`, `regionThreshold`, `doNotRegionalizeMembersOf`, `doNotRegionalizeTypes`, `onlyRegionalizeMembersOf`, `onlyRegionalizeTypes`\n\n- Edit in JSON to see defaults.",
                     "type": "object",
                     "properties": {
                         "ordering": {
@@ -100,7 +100,12 @@
                                     "name",
                                     "type"
                                 ]
-                            }
+                            },
+                            "default": [
+                                "type",
+                                "access",
+                                "name"
+                            ]
                         },
                         "typeSort": {
                             "type": "array",
@@ -116,7 +121,16 @@
                                     "record",
                                     "record struct"
                                 ]
-                            }
+                            },
+                            "default": [
+                                "delegate",
+                                "interface",
+                                "class",
+                                "enum",
+                                "struct",
+                                "record",
+                                "record struct"
+                            ]
                         },
                         "regionalization": {
                             "type": "array",
@@ -127,15 +141,19 @@
                                     "access",
                                     "type"
                                 ]
-                            }
+                            },
+                            "default": [
+                                "type"
+                            ]
                         },
                         "regionThreshold": {
                             "type": "integer",
                             "minimum": 0,
-                            "markdownDescription": "Number of members must exceed this threshold to be regionalized."
+                            "markdownDescription": "Number of members must exceed this threshold to be regionalized. Default is `2`.",
+                            "default": 2
                         },
                         "doNotRegionalizeMembersOf": {
-                            "markdownDescription": "Do not regionalize members of specified types.",
+                            "markdownDescription": "Do not regionalize members of specified types. Default is `[interface]`.",
                             "type": "array",
                             "uniqueItems": true,
                             "items": {
@@ -148,10 +166,13 @@
                                     "record struct",
                                     "struct"
                                 ]
-                            }
+                            },
+                            "default": [
+                                "interface"
+                            ]
                         },
                         "doNotRegionalizeTypes": {
-                            "markdownDescription": "Do not regionalize specified types.",
+                            "markdownDescription": "Do not regionalize specified types. Default is `[namespace, class]`.",
                             "type": "array",
                             "uniqueItems": true,
                             "items": {
@@ -166,7 +187,11 @@
                                     "record struct",
                                     "struct"
                                 ]
-                            }
+                            },
+                            "default": [
+                                "namespace",
+                                "class"
+                            ]
                         },
                         "onlyRegionalizeMembersOf": {
                             "markdownDescription": "Only regionalize members of specified types.",
@@ -205,8 +230,8 @@
                     },
                     "default": {
                         "ordering": [
-                            "access",
                             "type",
+                            "access",
                             "name"
                         ],
                         "typeSort": [
@@ -218,12 +243,22 @@
                             "record",
                             "record struct"
                         ],
-                        "regionThreshold": 2
+                        "regionalization": [
+                            "type"
+                        ],
+                        "regionThreshold": 2,
+                        "doNotRegionalizeMembersOf": [
+                            "interface"
+                        ],
+                        "onlyRegionalizeTypes": [
+                            "namespace",
+                            "class"
+                        ]
                     }
                 },
                 "csharpen.typeLevelOrganization": {
                     "order": 4,
-                    "markdownDescription": "Type-level (member and nested type) ordering. sorting and regionalization.\n\nAvailable properties (editing settings.json will provide IntelliSense popups): `ordering`, `typeSort`, `regionalization`, `regionThreshold`, `doNotRegionalizeMembersOf`, `doNotRegionalizeTypes`, `onlyRegionalizeMembersOf`, `onlyRegionalizeTypes`",
+                    "markdownDescription": "Type-level (member and nested type) ordering. sorting and regionalization.\n\nAvailable properties (editing settings.json will provide IntelliSense popups): `ordering`, `typeSort`, `regionalization`, `regionThreshold`, `doNotRegionalizeMembersOf`, `doNotRegionalizeTypes`, `onlyRegionalizeMembersOf`, `onlyRegionalizeTypes`\n\n- Edit in JSON to see defaults.",
                     "type": "object",
                     "properties": {
                         "ordering": {
@@ -236,7 +271,12 @@
                                     "name",
                                     "type"
                                 ]
-                            }
+                            },
+                            "default": [
+                                "type",
+                                "access",
+                                "name"
+                            ]
                         },
                         "typeSort": {
                             "type": "array",
@@ -262,7 +302,26 @@
                                     "static constructor",
                                     "struct"
                                 ]
-                            }
+                            },
+                            "default": [
+                                "delegate",
+                                "event",
+                                "constant",
+                                "property",
+                                "field",
+                                "static constructor",
+                                "constructor",
+                                "indexer",
+                                "finalizer",
+                                "method",
+                                "operator",
+                                "interface",
+                                "class",
+                                "enum",
+                                "struct",
+                                "record",
+                                "record struct"
+                            ]
                         },
                         "regionalization": {
                             "type": "array",
@@ -273,15 +332,19 @@
                                     "access",
                                     "type"
                                 ]
-                            }
+                            },
+                            "default": [
+                                "type"
+                            ]
                         },
                         "regionThreshold": {
                             "type": "integer",
                             "minimum": 0,
-                            "markdownDescription": "Number of members must exceed this threshold to be regionalized."
+                            "markdownDescription": "Number of members must exceed this threshold to be regionalized. Default is `2`.",
+                            "default": 2
                         },
                         "doNotRegionalizeMembersOf": {
-                            "markdownDescription": "Do not regionalize members of specified types.",
+                            "markdownDescription": "Do not regionalize members of specified types. Default is `[interface]`.",
                             "type": "array",
                             "uniqueItems": true,
                             "items": {
@@ -294,10 +357,13 @@
                                     "record struct",
                                     "struct"
                                 ]
-                            }
+                            },
+                            "default": [
+                                "interface"
+                            ]
                         },
                         "doNotRegionalizeTypes": {
-                            "markdownDescription": "Do not regionalize specified types.",
+                            "markdownDescription": "Do not regionalize specified types. Default is `[class]`.",
                             "type": "array",
                             "uniqueItems": true,
                             "items": {
@@ -322,10 +388,13 @@
                                     "static constructor",
                                     "struct"
                                 ]
-                            }
+                            },
+                            "default": [
+                                "class"
+                            ]
                         },
                         "onlyRegionalizeMembersOf": {
-                            "markdownDescription": "Only regionalize members of specified types.",
+                            "markdownDescription": "Only regionalize members of specified types. Default is `[class]`.",
                             "type": "array",
                             "uniqueItems": true,
                             "items": {
@@ -338,10 +407,13 @@
                                     "record struct",
                                     "struct"
                                 ]
-                            }
+                            },
+                            "default": [
+                                "class"
+                            ]
                         },
                         "onlyRegionalizeTypes": {
-                            "markdownDescription": "Only regionalize specified types.",
+                            "markdownDescription": "Only regionalize specified types. Default is `[property, field, constant, method]`.",
                             "type": "array",
                             "uniqueItems": true,
                             "items": {
@@ -366,7 +438,13 @@
                                     "static constructor",
                                     "struct"
                                 ]
-                            }
+                            },
+                            "default": [
+                                "property",
+                                "field",
+                                "constant",
+                                "method"
+                            ]
                         }
                     },
                     "default": {
@@ -398,6 +476,9 @@
                             "type"
                         ],
                         "regionThreshold": 2,
+                        "doNotRegionalizeMembersOf": [
+                            "interface"
+                        ],
                         "onlyRegionalizeMembersOf": [
                             "class"
                         ],
@@ -411,7 +492,7 @@
                 },
                 "csharpen.regionalizeInterfaceImplementations": {
                     "order": 5,
-                    "markdownDescription": "Regionalize interface implementations by grouping them together within regions. Use `*` to indicate all supported.\n\n- Supported interfaces (including corresponding generic type): `IAsyncDisposable`, `ICloneable`, `ICollection`, `IComparable`, `IConvertible`, `IDisposable`, `IEnumerable`, `IEqualityComparer`, `IEquatable`, `IFormattable`, `IList`",
+                    "markdownDescription": "Regionalize interface implementations by grouping them together within regions. Use `*` to indicate all supported.\n\n- Supported interfaces (including corresponding generic type): `IAsyncDisposable`, `ICloneable`, `ICollection`, `IComparable`, `IConvertible`, `IDisposable`, `IEnumerable`, `IEqualityComparer`, `IEquatable`, `IFormattable`, `IList`\n\n- Default is `[*]` (all supported).",
                     "type": "array",
                     "items": {
                         "type": "string",
@@ -432,7 +513,7 @@
                         ]
                     },
                     "default": [
-                        "IDisposable"
+                        "*"
                     ]
                 },
                 "csharpen.fileFilters": {
@@ -521,9 +602,6 @@
                         "^Use explicit type instead of 'var'"
                     ]
                 }
-            },
-            "menus": {
-                "editor/context": []
             }
         }
     },
