@@ -8,3 +8,4 @@ src/
 .vscodeignore
 tsconfig.json
 **/*.vsix
+**/CSharpDotNetProject/

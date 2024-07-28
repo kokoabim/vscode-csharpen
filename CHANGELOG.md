@@ -1,5 +1,10 @@
 ## ⍺ Alpha
 
+#### 2024-07-27 — 0.0.7
+
+- Fixed issue with handling classes outside of namespaces
+- Fixed issues introduced by the previous release regarding "maximum call stack size exceeded" errors
+
 #### 2024-07-27 — 0.0.6
 
 - Fixed issue with handling `event` declarations

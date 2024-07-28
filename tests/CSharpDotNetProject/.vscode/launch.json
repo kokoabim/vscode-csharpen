@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": ".NET Launch",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/CSharpDotNetProject/bin/Debug/net8.0/CSharpDotNetProject.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/CSharpDotNetProject",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "logging": {
+                "moduleLoad": false
+            }
+        }
+    ]
+}

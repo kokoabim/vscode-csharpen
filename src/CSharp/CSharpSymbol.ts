@@ -61,18 +61,21 @@ export class CSharpSymbol {
     }
 
     static addUsingAndNamespaceSymbols(usingAndNamespaceSymbols: CSharpSymbol[], symbols: CSharpSymbol[]): void {
-        const singleFileScopedNamespaceExists = usingAndNamespaceSymbols.filter(s => s.type === CSharpSymbolType.namespace && s.data.isFileScoped).length === 1;
+        const namespaceSymbols = usingAndNamespaceSymbols.filter(s => s.type === CSharpSymbolType.namespace);
+        const singleFileScopedNamespaceExists = namespaceSymbols.filter(s => s.data.isFileScoped).length === 1;
 
-        for (const namespaceSymbol of usingAndNamespaceSymbols.filter(s => s.type === CSharpSymbolType.namespace)) {
-            for (let i = symbols.length - 1; i >= 0; i--) {
-                const s = symbols[i];
-                if (s.parent || (!singleFileScopedNamespaceExists && (s.position?.isBefore(namespaceSymbol.range!.start) || s.position?.isAfter(namespaceSymbol.range!.end)))) continue;
+        for (let i = symbols.length - 1; i >= 0; i--) {
+            const s = symbols[i];
 
-                s.parent = namespaceSymbol;
+            if (s.parent) continue;
 
-                s.parent.children.push(s);
-                symbols.splice(i, 1);
-            }
+            const namespaceSymbol = singleFileScopedNamespaceExists ? namespaceSymbols[0] : CSharpSymbol.getNamespaceByPosition(namespaceSymbols, s.position!);
+            if (!namespaceSymbol) continue;
+
+            s.parent = namespaceSymbol;
+            s.parent.children.push(s);
+
+            symbols.splice(i, 1);
         }
 
         symbols.unshift(...usingAndNamespaceSymbols);
@@ -196,18 +199,12 @@ export class CSharpSymbol {
 
     private static adjustRange(textDocument: vscode.TextDocument, range: vscode.Range, kindOrType: vscode.SymbolKind | CSharpSymbolType): vscode.Range {
         const previousNewLineOrBlockChars = "\n\r};";
-        const whitespaceChars = " \t";
-
         const text = textDocument.getText();
         const length = text.length;
 
         let startIndex = textDocument.offsetAt(range.start);
-        if (kindOrType === vscode.SymbolKind.Event || kindOrType === CSharpSymbolType.event) {
-            while (startIndex > 0 && !previousNewLineOrBlockChars.includes(text[startIndex])) startIndex--;
-            startIndex++;
-
-        }
-        else while (startIndex > 0 && whitespaceChars.includes(text[startIndex])) startIndex--;
+        while (startIndex > 0 && !previousNewLineOrBlockChars.includes(text[startIndex])) startIndex--;
+        startIndex++;
 
         if (kindOrType !== vscode.SymbolKind.Event && kindOrType !== CSharpSymbolType.event) return range.with({ start: textDocument.positionAt(startIndex) });
 
@@ -370,6 +367,10 @@ export class CSharpSymbol {
         if (removeExtractedText) CSharpSymbol.removeStringSpans(symbol, spans);
 
         return spans;
+    }
+
+    private static getNamespaceByPosition(namespaceSymbols: CSharpSymbol[], position: vscode.Position): CSharpSymbol | undefined {
+        return namespaceSymbols.filter(s => s.range?.contains(position)).sort((a, b) => a.range!.end.compareTo(b.range!.end))[0];
     }
 
     private static joinDelimiter(previous: CSharpSymbol | undefined, current: CSharpSymbol): string {
@@ -547,7 +548,7 @@ export class CSharpSymbol {
 
         if (symbol.canHaveChildren) {
             const openBraceIndex = text.indexOf("{", signatureIndex);
-            if (openBraceIndex === -1) throw new Error("Symbol signature does not have an open brace. Please report a bug with example code.");
+            if (openBraceIndex === -1) throw new Error("Symbol signature does not have an open brace. Please report a issue with example code.");
 
             const signature = text.substring(signatureIndex, openBraceIndex).trim();
             symbol.appendToHeader(`${signature}\n{`);
@@ -559,7 +560,7 @@ export class CSharpSymbol {
         return textBeforeSymbolNameIndex;
     }
 
-    private static parseCodeBeforeSymbolName(symbol: CSharpSymbol, code: string): boolean {
+    private static parseCodeBeforeSymbolName(symbol: CSharpSymbol, code: string, tryingAdjustedRange = false): boolean {
         const afterAttributesAndModifiersIndex = CSharpSymbol.parseAttributesAndModifiers(symbol, code);
 
         const symbolName = symbol.name.includes(".") ? symbol.name.split(".").pop() : symbol.name; // following two lines is a workaround for explicit interface implementations
@@ -568,24 +569,27 @@ export class CSharpSymbol {
 
         let codeBeforeSymbolName = "";
         if (afterAttributesAndModifiersIndex === 0 && symbolNameIndex === 0) {
-            if (!symbol.range) throw new Error("Symbol declaration that requires special parsing does not have a range. This is not supported. Please report a bug with example code.");
-            else if (symbol.range.start.line !== symbol.range.end.line) throw new Error("Symbol declaration that requires special parsing spans multiple lines. This is not supported. Please report a bug with example code.");
+            if (!symbol.range) throw new Error("Symbol declaration that requires special parsing does not have a range. This is not supported. Please report a issue with example code.");
+            else if (symbol.range.start.line !== symbol.range.end.line) throw new Error("Symbol declaration that requires special parsing spans multiple lines. This is not supported. Please report a issue with example code.");
 
             const documentTextLine = symbol.lineAt(symbol.range.start.line);
-            if (!documentTextLine) throw new Error("Symbol declaration that requires special parsing does not have a document text line. This is not supported. Please report a bug with example code.");
+            if (!documentTextLine) throw new Error("Symbol declaration that requires special parsing does not have a document text line. This is not supported. Please report a issue with example code.");
 
-            let actualRange = new vscode.Range(new vscode.Position(documentTextLine.range.start.line, documentTextLine.firstNonWhitespaceCharacterIndex), documentTextLine.range.end);
-            actualRange = CSharpSymbol.adjustRange(symbol.textDocument!, actualRange, symbol.type);
+            const possibleRange = new vscode.Range(new vscode.Position(documentTextLine.range.start.line, documentTextLine.firstNonWhitespaceCharacterIndex), documentTextLine.range.end);
+            const adjustedRange = CSharpSymbol.adjustRange(symbol.textDocument!, possibleRange, symbol.type);
 
-            const actualBody = symbol.getText(actualRange);
-            if (!actualBody) throw new Error("Symbol declaration that requires special parsing does not have document text of range. This is not supported. Please report a bug with example code.");
+            const adjustedRangeBody = symbol.getText(adjustedRange);
+            if (!adjustedRangeBody) throw new Error("Symbol declaration that requires special parsing does not have document text of range. This is not supported. Please report a issue with example code.");
 
-            if (!CSharpSymbol.parseCodeBeforeSymbolName(symbol, actualBody)) throw new Error("Symbol declaration that requires special parsing did not parse text before symbol name. This is not supported. Please report a bug with example code.");
+            if (possibleRange.isEqual(adjustedRange)) {
+                symbol.body = adjustedRangeBody;
+                symbol.position = adjustedRange.start;
+                symbol.range = adjustedRange;
+                return true;
+            }
+            else if (tryingAdjustedRange) throw new Error("Symbol declaration that requires special parsing did not parse text before symbol name. This is not supported. Please report a issue with example code.");
 
-            symbol.body = actualBody;
-            symbol.position = actualRange.start;
-            symbol.range = actualRange;
-            return true;
+            return CSharpSymbol.parseCodeBeforeSymbolName(symbol, adjustedRangeBody, true);
         }
 
         codeBeforeSymbolName = code.substring(afterAttributesAndModifiersIndex, symbolNameIndex - 1).trim();
@@ -704,7 +708,7 @@ export class CSharpSymbol {
         let documentText = textDocument.getText();
 
         for (const symbol of [...symbols].reverse()) {
-            if (!symbol.range) throw new Error("Symbol does not have a range. This is not supported. Please report a bug with example code.");
+            if (!symbol.range) throw new Error("Symbol does not have a range. This is not supported. Please report a issue with example code.");
 
             let symbolText = textDocument.getText(symbol.range);
             symbolText = symbolText.replaceAll(CSharpPatterns.nonNewLine, " ");

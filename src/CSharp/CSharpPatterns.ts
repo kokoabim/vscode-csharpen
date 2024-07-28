@@ -13,8 +13,8 @@ export class CSharpPatterns {
     static readonly implementsRegExp = new RegExp(`\\s*(?<type>${CSharpPatterns.anyType})(\\s*,\\s*)?`, "g");
     static readonly modifiers = "(?<modifiers>(\\s*(new|public|protected|private|internal|protected\\s+internal|private\\s+protected|file|static|extern|virtual|partial|abstract|sealed|override|readonly|unsafe|volatile|async)\\s+)*)?";
     static readonly multiLineCommentRegExp = new RegExp("(?<text>/\\*.*?\\*/)", "gs");
-    static readonly namespaceDeclarationFileScopedRegExp = new RegExp(`^(?<declaration>(?<signature>[ \\t]*namespace\\s+(?<namespace>${CSharpPatterns.namespace}))\\s*;\\s*)`, "gm");
-    static readonly namespaceDeclarationWithBodyRegExp = new RegExp(`^(?<declaration>(?<signature>[ \\t]*namespace\\s+(?<namespace>${CSharpPatterns.namespace}))\\s*\\{.*?\\}\\s*)`, "gms");
+    static readonly namespaceDeclarationFileScopedRegExp = new RegExp(`^(?<declaration>(?<signature>[ \\t]*namespace\\s+(?<namespace>${CSharpPatterns.namespace}))\\s*;)`, "gm");
+    static readonly namespaceDeclarationWithBodyRegExp = new RegExp(`^(?<declaration>(?<signature>[ \\t]*namespace\\s+(?<namespace>${CSharpPatterns.namespace}))\\s*\\{.*?\\})`, "gms");
     static readonly nonNewLine = new RegExp("[^\\r\\n]", "g");
     static readonly openPreprocessorDirectives = new RegExp("^(?<text>[ \\t]*#[ \\t]*(if|pragma).*?)\\r?\\n", "gm");
     static readonly singleLineCommentRegExp = new RegExp("^(?<text>[ \\t]*//.*?[\\r\\n]*)$", "gm");

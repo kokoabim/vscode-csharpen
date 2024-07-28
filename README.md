@@ -107,6 +107,11 @@ If you're curious, the [C# specification grammar](https://learn.microsoft.com/en
 
 # Release Notes / Changelog
 
+#### 2024-07-27 — 0.0.7
+
+- Fixed issue with handling classes outside of namespaces
+- Fixed issues introduced by the previous release regarding "maximum call stack size exceeded" errors
+
 #### 2024-07-27 — 0.0.6
 
 - Fixed issue with handling `event` declarations
