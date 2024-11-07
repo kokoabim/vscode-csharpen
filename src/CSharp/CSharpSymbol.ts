@@ -505,7 +505,7 @@ export class CSharpSymbol {
 
         for (const symbol of symbolsToPossiblyMove) {
             for (const parentSymbol of parentSymbols) {
-                if (symbol.namespace!.match(`^.*?\\.${parentSymbol.name}$`) === null) continue;
+                if (symbol.namespace!.match(`^.*?${parentSymbol.name}$`) === null) continue;
 
                 symbol.namespace = undefined;
                 symbol.parent = parentSymbol;
