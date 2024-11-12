@@ -497,25 +497,26 @@ export class CSharpSymbol {
     /** Moves symbols that have no parent or a parent with {@link CSharpSymbolType.file} using the {@link CSharpSymbol.namespace} value to determine the parent.
      * @returns Reference to the same array. */
     private static organizeParentToChildHierarchy(symbols: CSharpSymbol[]): CSharpSymbol[] {
-        const parentSymbols = symbols.filter(s => (!s.parent || s.parent.type === CSharpSymbolType.file) && s.canHaveChildren);
-        if (parentSymbols.length === 0) return symbols;
-
-        const symbolsToPossiblyMove = symbols.filter(s => (!s.parent || s.parent.type === CSharpSymbolType.file) && CSharpSymbolType.canImproperlyBeOnFileLevel(s.type) && s.namespace);
-        if (symbolsToPossiblyMove.length === 0) return symbols;
-
+        const parentSymbols = symbols.filter(s => (!s.parent || s.parent.type === CSharpSymbolType_1.CSharpSymbolType.file) && s.canHaveChildren);
+        if (parentSymbols.length === 0)
+            return symbols;
+        
+        const symbolsToPossiblyMove = symbols.filter(s => (!s.parent || s.parent.type === CSharpSymbolType_1.CSharpSymbolType.file) && CSharpSymbolType_1.CSharpSymbolType.canImproperlyBeOnFileLevel(s.type) && s.fullName);
+        if (symbolsToPossiblyMove.length === 0)
+            return symbols;
+        
         for (const symbol of symbolsToPossiblyMove) {
             for (const parentSymbol of parentSymbols) {
-                if (symbol.namespace!.match(`^.*?${parentSymbol.name}$`) === null) continue;
-
+                if (symbol.fullName.match(`^.*?${parentSymbol.name}\\.${symbol.name}$`) === null)
+                    continue;
                 symbol.namespace = undefined;
                 symbol.parent = parentSymbol;
-
                 parentSymbol.children.push(symbol);
                 symbols.splice(symbols.indexOf(symbol), 1);
                 break;
             }
         }
-
+        
         return symbols;
     }
 
