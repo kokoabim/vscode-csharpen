@@ -1,5 +1,9 @@
 ## ⍺ Alpha
 
+#### 2024-12-24 — 0.0.9
+
+- Added setting to control whether sharpening can happen with a file that has diagnostic errors
+
 #### 2024-07-28 — 0.0.8
 
 - Made sure all settings have defaults.

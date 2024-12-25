@@ -14,4 +14,8 @@ export abstract class VSCodeExtensionSettings {
     hasConfiguration(): boolean {
         return !!vscode.workspace.getConfiguration(this.configurationSection);
     }
+
+    set<T>(name: string, value: T, configurationTarget: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Global): Thenable<void> {
+        return vscode.workspace.getConfiguration(this.configurationSection).update(name, value, configurationTarget);
+    }
 }

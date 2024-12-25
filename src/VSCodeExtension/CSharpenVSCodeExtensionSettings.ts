@@ -27,6 +27,7 @@ export class CSharpenVSCodeExtensionSettings extends VSCodeExtensionSettings {
         "IFormattable",
     ];
 
+    allowSharpenWithFileDiagnosticErrors = false;
     fileFilters: FileFilter[] = [];
     formatDocumentOnSharpen = true;
     indentation!: string;

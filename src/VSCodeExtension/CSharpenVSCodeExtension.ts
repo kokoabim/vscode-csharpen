@@ -107,15 +107,33 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             const [textEditor, textDocument] = await this.getTextEditorAndTextDocument();
             if (!textEditor || !textDocument) { return; }
 
+            const settings = CSharpenVSCodeExtensionSettings.shared(true);
+
             const fileDiagnostics = CSharpFile.getFileDiagnosticsUsingTextDocument(textDocument);
             const fileDiagErrors = fileDiagnostics.filter(d => d.severity === FileDiagnosticSeverity.Error);
             if (fileDiagErrors.length > 0) {
-                this.warning("File contains errors. Fix and try again.");
                 this.outputFileDiagnostics(fileDiagErrors);
-                return;
+
+                if (!settings.allowSharpenWithFileDiagnosticErrors) {
+                    const result = await vscode.window.showWarningMessage("File contains diagnostic errors. Continue sharpening?",
+                        {
+                            modal: true,
+                            detail: "Sharpening may not work as expected with file diagnostic errors. If 'Always' is selected, this warning will not be shown again and can be re-enabled in settings.",
+                        },
+                        "Once", "Always");
+
+                    if (!result) {
+                        return;
+                    } else if (result === "Always") {
+                        settings.allowSharpenWithFileDiagnosticErrors = true;
+                        await settings.set("allowSharpenWithFileDiagnosticErrors", true);
+                    }
+                }
+                else {
+                    await vscode.window.showWarningMessage("File contains diagnostic errors though sharpening is allowed. This can be adjusted in settings.");
+                }
             }
 
-            const settings = CSharpenVSCodeExtensionSettings.shared(true);
             const documentText = textDocument.getText();
 
             const [fileFilterStatus, fileFilterReason] = FileFilter.checkAll(vscode.workspace.asRelativePath(textDocument.uri), documentText, settings.fileFilters);
