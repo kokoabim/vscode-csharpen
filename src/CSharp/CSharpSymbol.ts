@@ -203,8 +203,10 @@ export class CSharpSymbol {
         const length = text.length;
 
         let startIndex = textDocument.offsetAt(range.start);
-        while (startIndex > 0 && !previousNewLineOrBlockChars.includes(text[startIndex])) startIndex--;
-        startIndex++;
+        if (startIndex !== 0) {
+            while (startIndex > 0 && !previousNewLineOrBlockChars.includes(text[startIndex])) startIndex--;
+            startIndex++;
+        }
 
         if (kindOrType !== vscode.SymbolKind.Event && kindOrType !== CSharpSymbolType.event) return range.with({ start: textDocument.positionAt(startIndex) });
 
