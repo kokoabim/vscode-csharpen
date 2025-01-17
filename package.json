@@ -1,18 +1,18 @@
 {
     "name": "csharpen",
     "publisher": "spencerjames",
-    "version": "0.0.9",
+    "version": "0.0.10",
     "description": "Sharpen (organize) C# files by ordering, sorting and regionalizing symbols.",
     "displayName": "CSharpen — C# File Organizer",
     "shortName": "CSharpen",
     "author": {
-        "name": "Spencer James (kokoabim)",
-        "email": "dev@kokoabim.com",
+        "name": "Spencer James",
+        "email": "apps@swsj.me",
         "url": "https://swsj.me/"
     },
     "bugs": {
         "url": "https://github.com/kokoabim/vscode-csharpen/issues",
-        "email": "dev@kokoabim.com"
+        "email": "apps@swsj.me"
     },
     "repository": {
         "type": "git",

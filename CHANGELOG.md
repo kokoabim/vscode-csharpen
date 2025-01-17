@@ -1,5 +1,9 @@
 ## ⍺ Alpha
 
+#### 2025-01-17 — 0.0.10
+
+- Fixed issue with character at position 0:0 being trimmed
+
 #### 2024-12-24 — 0.0.9
 
 - Added setting to control whether sharpening can happen with a file that has diagnostic errors

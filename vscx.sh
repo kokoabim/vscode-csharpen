@@ -2,7 +2,7 @@
 
 # ==============================================================================
 # vscx — Visual Studio Code Extension Management
-# Spencer James (kokoabim), dev@kokoabim.com, https://swsj.me
+# Spencer James, https://swsj.me
 # ==============================================================================
 # The MIT License (MIT)
 # All rights reserved.
