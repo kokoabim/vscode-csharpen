@@ -500,17 +500,14 @@ export class CSharpSymbol {
      * @returns Reference to the same array. */
     private static organizeParentToChildHierarchy(symbols: CSharpSymbol[]): CSharpSymbol[] {
         const parentSymbols = symbols.filter(s => (!s.parent || s.parent.type === CSharpSymbolType.file) && s.canHaveChildren);
-        if (parentSymbols.length === 0)
-            return symbols;
-        
+        if (parentSymbols.length === 0) return symbols;
+
         const symbolsToPossiblyMove = symbols.filter(s => (!s.parent || s.parent.type === CSharpSymbolType.file) && CSharpSymbolType.canImproperlyBeOnFileLevel(s.type) && s.fullName);
-        if (symbolsToPossiblyMove.length === 0)
-            return symbols;
-        
+        if (symbolsToPossiblyMove.length === 0) return symbols;
+
         for (const symbol of symbolsToPossiblyMove) {
             for (const parentSymbol of parentSymbols) {
-                if (symbol.fullName.match(`^.*?${parentSymbol.name}\\.${symbol.name}$`) === null)
-                    continue;
+                if (symbol.fullName.match(`^.*?${parentSymbol.name}\\.${symbol.name}$`) === null) continue;
                 symbol.namespace = undefined;
                 symbol.parent = parentSymbol;
                 parentSymbol.children.push(symbol);
@@ -518,7 +515,7 @@ export class CSharpSymbol {
                 break;
             }
         }
-        
+
         return symbols;
     }
 
