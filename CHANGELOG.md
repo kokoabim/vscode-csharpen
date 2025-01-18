@@ -1,5 +1,9 @@
 ## ⍺ Alpha
 
+#### 2025-01-18 — 0.0.13
+
+- Fixed issue when detecting and creating non-code blocks, i.e. comments. It was too aggressive and behavior would be that comments from down below would be pulled up to top symbols. Using a primary constructor could induce this.
+
 #### 2025-01-17 — 0.0.12
 
 - Fixed issue with having multiple attributes
