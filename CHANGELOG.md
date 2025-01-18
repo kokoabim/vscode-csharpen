@@ -1,5 +1,9 @@
 ## ⍺ Alpha
 
+#### 2025-01-17 — 0.0.11
+
+- Fixed issue with nested classes (credit: [Kali Toste](https://github.com/Clayton-Toste))
+
 #### 2025-01-17 — 0.0.10
 
 - Fixed issue with character at position 0:0 being trimmed
