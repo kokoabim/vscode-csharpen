@@ -1,3 +1,10 @@
+## β Beta
+
+#### 2025-01-18 — 0.1.0
+
+- Added feature to enforce use of file-scoped namespaces on _sharpen_. This can be toggle in settings.
+- Upgraded to beta since there has been a lot of recent changes and fixes, and I use it heavily in my daily work and find it quite stable (and useful).
+
 ## ⍺ Alpha
 
 #### 2025-01-18 — 0.0.13
