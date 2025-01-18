@@ -131,6 +131,10 @@ export class CSharpSymbol {
 
             if (!currentBlockStart) throw new Error(`Symbol does not have a range start: type=${CSharpSymbolType[currentSymbol.type]}, fullName=${currentSymbol.fullName}`);
 
+            if (previousBlockEnd > currentBlockStart) {
+                previousBlockEnd = currentBlockStart;
+            }
+
             CSharpSymbol.createNonCodeblock(nonCodeblockSymbols, new vscode.Range(previousBlockEnd, currentBlockStart), currentSymbol, previousSymbol, parent);
 
             if (currentSymbol.hasChildren) CSharpSymbol.createNonCodeblockSymbols(textDocument, usingAndNamespaceSymbols, currentSymbol.children, currentSymbol);
