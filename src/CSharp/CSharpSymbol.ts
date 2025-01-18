@@ -163,8 +163,10 @@ export class CSharpSymbol {
         let usingSymbols: CSharpSymbol[];
         let namespaceSymbols: CSharpSymbol[];
 
+        let enforceFileScopedNamespace = CSharpenVSCodeExtensionSettings.shared().enforceFileScopedNamespaces && symbols.every(s => s.namespace === symbols[0].namespace);
+
         [usingSymbols, strippedDocumentText] = CSharpSymbol.createUsingDirectives(textDocument, strippedDocumentText);
-        [namespaceSymbols, strippedDocumentText] = CSharpSymbol.createNamespaceDeclarations(textDocument, strippedDocumentText);
+        [namespaceSymbols, strippedDocumentText] = CSharpSymbol.createNamespaceDeclarations(textDocument, strippedDocumentText, enforceFileScopedNamespace);
 
         return CSharpSymbol.orderByPosition(usingSymbols.concat(namespaceSymbols));
     }
@@ -247,7 +249,7 @@ export class CSharpSymbol {
         return symbol;
     }
 
-    private static createNamespaceDeclarations(textDocument: vscode.TextDocument, strippedDocumentText: string): [CSharpSymbol[], string] {
+    private static createNamespaceDeclarations(textDocument: vscode.TextDocument, strippedDocumentText: string, enforceFileScopedNamespace: boolean): [CSharpSymbol[], string] {
         const symbols: CSharpSymbol[] = [];
         let m;
 
@@ -262,13 +264,13 @@ export class CSharpSymbol {
 
                 re.lastIndex = 0; // yes, reset it since we're using it in a loop against a string that is being modified
 
-                if (isFileScoped && symbols.filter(s => s.data.isFileScoped).length > 0) throw new Error("Multiple file-scoped namespaces are not supported.");
+                if (isFileScoped && symbols.filter(s => s.data.isFileScoped).length > 0) throw new Error("Multiple file-scoped namespaces that differ is not supported.");
 
                 const symbol = CSharpSymbol.createNamespace(
                     namespace,
                     new vscode.Range(textDocument.positionAt(m.index), textDocument.positionAt(m.index + declaration.length)),
                     textDocument.positionAt(m.index + signature.length),
-                    isFileScoped);
+                    isFileScoped || enforceFileScopedNamespace);
 
                 symbols.push(symbol);
 

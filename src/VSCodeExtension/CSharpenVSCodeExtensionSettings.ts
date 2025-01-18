@@ -28,6 +28,7 @@ export class CSharpenVSCodeExtensionSettings extends VSCodeExtensionSettings {
     ];
 
     allowSharpenWithFileDiagnosticErrors = false;
+    enforceFileScopedNamespaces = true;
     fileFilters: FileFilter[] = [];
     formatDocumentOnSharpen = true;
     indentation!: string;
@@ -76,6 +77,8 @@ export class CSharpenVSCodeExtensionSettings extends VSCodeExtensionSettings {
         const fileFilters = settings.get<FileFilter[]>("fileFilters");
         if (fileFilters) settings.fileFilters = fileFilters.map(ff => new FileFilter(ff));
 
+        settings.allowSharpenWithFileDiagnosticErrors = settings.get<boolean>("allowSharpenWithFileDiagnosticErrors") ?? false;
+        settings.enforceFileScopedNamespaces = settings.get<boolean>("enforceFileScopedNamespaces") ?? true;
         settings.formatDocumentOnSharpen = settings.get<boolean>("formatDocumentOnSharpen") ?? true;
         settings.quickFixFilters = settings.get<string[]>("quickFixFilters") ?? [];
         settings.regionalizeInterfaceImplementations = settings.get<string[]>("regionalizeInterfaceImplementations") ?? [];

@@ -79,20 +79,26 @@
                     "type": "boolean",
                     "default": false
                 },
-                "csharpen.showFileSizeDifferenceOnSharpen": {
+                "csharpen.enforceFileScopedNamespaces": {
                     "order": 2,
+                    "markdownDescription": "Enforce file-scoped namespaces when _sharpening_. If differing namespaces are detected in a file, this will not be performed.",
+                    "type": "boolean",
+                    "default": true
+                },
+                "csharpen.showFileSizeDifferenceOnSharpen": {
+                    "order": 3,
                     "markdownDescription": "Show the file size difference (in characters) after _sharpening_.",
                     "type": "boolean",
                     "default": true
                 },
                 "csharpen.formatDocumentOnSharpen": {
-                    "order": 3,
+                    "order": 4,
                     "markdownDescription": "Perform the format document command before and after _sharpening_.\n\n**WARNING:** Leave this enabled to ensure parsing dependability. Disable only for debugging and advanced purposes.",
                     "type": "boolean",
                     "default": true
                 },
                 "csharpen.namespaceLevelOrganization": {
-                    "order": 4,
+                    "order": 5,
                     "markdownDescription": "Namespace-level ordering, sorting and regionalization.\n\nAvailable properties (editing settings.json will provide IntelliSense popups): `ordering`, `typeSort`, `regionalization`, `regionThreshold`, `doNotRegionalizeMembersOf`, `doNotRegionalizeTypes`, `onlyRegionalizeMembersOf`, `onlyRegionalizeTypes`\n\n- Edit in JSON to see defaults.",
                     "type": "object",
                     "properties": {
@@ -263,7 +269,7 @@
                     }
                 },
                 "csharpen.typeLevelOrganization": {
-                    "order": 5,
+                    "order": 6,
                     "markdownDescription": "Type-level (member and nested type) ordering. sorting and regionalization.\n\nAvailable properties (editing settings.json will provide IntelliSense popups): `ordering`, `typeSort`, `regionalization`, `regionThreshold`, `doNotRegionalizeMembersOf`, `doNotRegionalizeTypes`, `onlyRegionalizeMembersOf`, `onlyRegionalizeTypes`\n\n- Edit in JSON to see defaults.",
                     "type": "object",
                     "properties": {
@@ -497,7 +503,7 @@
                     }
                 },
                 "csharpen.regionalizeInterfaceImplementations": {
-                    "order": 6,
+                    "order": 7,
                     "markdownDescription": "Regionalize interface implementations by grouping them together within regions. Use `*` to indicate all supported.\n\n- Supported interfaces (including corresponding generic type): `IAsyncDisposable`, `ICloneable`, `ICollection`, `IComparable`, `IConvertible`, `IDisposable`, `IEnumerable`, `IEqualityComparer`, `IEquatable`, `IFormattable`, `IList`\n\n- Default is `[*]` (all supported).",
                     "type": "array",
                     "items": {
@@ -523,7 +529,7 @@
                     ]
                 },
                 "csharpen.fileFilters": {
-                    "order": 7,
+                    "order": 8,
                     "markdownDescription": "Filter files (i.e. ignore) by name and content on _sharpen_.",
                     "type": "array",
                     "items": {
@@ -592,7 +598,7 @@
                     ]
                 },
                 "csharpen.quickFixFilters": {
-                    "order": 8,
+                    "order": 9,
                     "markdownDescription": "Patterns to filter out QuickFix titles when outputting file diagnostics.",
                     "type": "array",
                     "items": {
