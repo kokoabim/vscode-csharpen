@@ -25,7 +25,7 @@ export class CSharpProjectFile {
     }
 
     async readFile(): Promise<void> {
-        if (this._fileContent) { return; }
+
         await FileSystem.readFile(this.filePath).then(content => {
             this._fileContent = content;
         }, error => {

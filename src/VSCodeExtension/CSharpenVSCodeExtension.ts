@@ -6,7 +6,7 @@ import { FileFilter, FileFilterStatus } from "../Models/FileFilter";
 import { VSCodeCommand } from "./VSCodeCommand";
 import { VSCodeExtension } from "./VSCodeExtension";
 import * as vscode from "vscode";
-// import { CSharpProjectFile } from "../CSharp/CSharpProjectFile";
+import { CSharpProjectFile } from "../CSharp/CSharpProjectFile";
 import { FileSystem } from "../Utils/FileSystem";
 
 /**
@@ -18,9 +18,10 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
         this.addCommands(
             this.createOutputFileDiagnosticsCommand(),
-            // this.createOutputFileDiagnosticsForProjectCommand(),
+            this.createOutputFileDiagnosticsForProjectFilesCommand(),
             this.createRemoveUnusedUsingsCommand(),
-            this.createSharpenFileCommand());
+            this.createSharpenFileCommand(),
+            this.createSharpenProjectFilesCommand());
     }
 
     static use(context: vscode.ExtensionContext): CSharpenVSCodeExtension {
@@ -48,46 +49,44 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         });
     }
 
-    // TODO: Implement this...
-    // private createOutputFileDiagnosticsForProjectCommand(): VSCodeCommand {
-    //     return new VSCodeCommand("kokoabim.csharpen.output-file-diagnostics-for-project", async () => {
-    //         if (!await super.isWorkspaceReady()) { return; }
+    private createOutputFileDiagnosticsForProjectFilesCommand(): VSCodeCommand {
+        return new VSCodeCommand("kokoabim.csharpen.output-file-diagnostics-for-project-files", async () => {
+            if (!await super.isWorkspaceReady()) { return; }
 
-    //         const textDocument = await this.getTextDocument();
-    //         if (!textDocument) { return; }
+            const [document, documentRelativePath] = await this.getCSharpFileOrProjectOpenOrSelected();
+            if (!document) { return; }
 
-    //         const cSharpProjectFiles = await CSharpProjectFile.findProjects(this.workspaceFolder!.uri.path);
-    //         if (cSharpProjectFiles.length === 0) {
-    //             await this.information("No C# project found.");
-    //             return;
-    //         }
+            const cSharpProjectFiles = await CSharpProjectFile.findProjects(this.workspaceFolder!.uri.path);
+            if (cSharpProjectFiles.length === 0) {
+                await this.information("No C# project found.");
+                return;
+            }
 
-    //         const cSharpProjectFile = cSharpProjectFiles.find(p => textDocument.uri.path.includes(p.directory + "/"));
-    //         if (!cSharpProjectFile) {
-    //             await this.information("No C# project found.");
-    //             return;
-    //         }
+            const cSharpProjectFile = cSharpProjectFiles.find(p => document.uri.path.includes(p.directory + "/"));
+            if (!cSharpProjectFile) {
+                await this.information("No C# project found for current document.");
+                return;
+            }
 
-    //         const cSharpFiles = (await vscode.workspace.findFiles("**/*.cs")).filter(f => f.path.includes(cSharpProjectFile.directory + "/"));
-    //         if (cSharpFiles.length === 0) {
-    //             await this.information(`${cSharpProjectFile.name}: No C# files found.`);
-    //             return;
-    //         }
+            const fileUris = (await vscode.workspace.findFiles("**/*.cs")).filter(f => f.path.includes(cSharpProjectFile.directory + "/"));
+            if (fileUris.length === 0) {
+                this.information(`${cSharpProjectFile.relativePath}: No C# files found.`);
+                return;
+            }
 
-    //         const fileDiagnosticsForProject = cSharpFiles.map(f => CSharpFile.getFileDiagnosticsUsingUri(f)).filter(d => d.length > 0);
+            const fileDiagnosticsForProjectFiles = fileUris.map(f => CSharpFile.getFileDiagnosticsUsingUri(f));
+            if (fileDiagnosticsForProjectFiles.length === 0) {
+                await this.information(`${cSharpProjectFile.name}: No diagnostics found.`);
+                return;
+            }
 
-    //         if (fileDiagnosticsForProject.length === 0) {
-    //             await this.information(`${cSharpProjectFile.name}: No diagnostics found.`);
-    //             return;
-    //         }
+            this.clearOutput();
 
-    //         this.clearOutput();
-
-    //         fileDiagnosticsForProject.forEach(fileDiagnostics => {
-    //             this.outputFileDiagnostics(fileDiagnostics);
-    //         });
-    //     });
-    // }
+            fileDiagnosticsForProjectFiles.forEach(fileDiagnostics => {
+                this.outputFileDiagnostics(fileDiagnostics);
+            });
+        });
+    }
 
     private createRemoveUnusedUsingsCommand(): VSCodeCommand {
         return new VSCodeCommand("kokoabim.csharpen.remove-unused-usings", async () => {
@@ -126,7 +125,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                         return;
                     } else if (result === "Always") {
                         settings.allowSharpenWithFileDiagnosticErrors = true;
-                        await settings.set("allowSharpenWithFileDiagnosticErrors", true);
+                        await settings.set("allowSharpenWithFileDiagnosticErrors", true, vscode.ConfigurationTarget.Global);
                     }
                 }
                 else {
@@ -188,9 +187,70 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         });
     }
 
+    private createSharpenProjectFilesCommand(): VSCodeCommand {
+        return new VSCodeCommand("kokoabim.csharpen.sharpen-project-files", async () => {
+            if (!await super.isWorkspaceReady()) { return; }
+
+            const [document, documentRelativePath] = await this.getCSharpFileOrProjectOpenOrSelected();
+            if (!document) { return; }
+
+            const cSharpProjectFiles = await CSharpProjectFile.findProjects(this.workspaceFolder!.uri.path);
+            if (cSharpProjectFiles.length === 0) {
+                await this.information("No C# project found.");
+                return;
+            }
+
+            const cSharpProjectFile = cSharpProjectFiles.find(p => document.uri.path.includes(p.directory + "/"));
+            if (!cSharpProjectFile) {
+                await this.information("No C# project found for current document.");
+                return;
+            }
+
+            const fileUris = (await vscode.workspace.findFiles("**/*.cs")).filter(f => f.path.includes(cSharpProjectFile.directory + "/"));
+            if (fileUris.length === 0) {
+                this.information(`${cSharpProjectFile.relativePath}: No C# files found.`);
+                return;
+            }
+
+            if ("Yes" !== (await vscode.window.showInformationMessage(
+                `Sharpen all C# files in project?`,
+                {
+                    modal: true,
+                    detail: `This will open and sharpen ${fileUris.length} C# files under project ${cSharpProjectFile.name}. Modifications can be undone.`,
+                },
+                "Yes", "No"))) { return; }
+
+            for await (const fileUri of fileUris) {
+                const textDocument = await vscode.workspace.openTextDocument(fileUri);
+                const textEditor = await vscode.window.showTextDocument(textDocument);
+                await vscode.commands.executeCommand("kokoabim.csharpen.sharpen-file");
+            }
+        });
+    }
+
     private filterCodeActions(documentSymbolCodeActions: DocumentSymbolCodeActions, filters: string[]): void {
         documentSymbolCodeActions.codeActions = documentSymbolCodeActions.codeActions.filter(ca => !filters.some(f => ca.title.match(f) !== null));
         documentSymbolCodeActions.children.forEach(c => this.filterCodeActions(c, filters));
+    }
+
+    private async getCSharpFileOrProjectOpenOrSelected(): Promise<[vscode.TextDocument | undefined, string | undefined]> {
+        let document;
+        try {
+            document = vscode.window.activeTextEditor?.document;
+            if (!document) {
+                await vscode.commands.executeCommand('copyFilePath');
+                const clipboard = await vscode.env.clipboard.readText();
+                if (clipboard) { document = await vscode.workspace.openTextDocument(clipboard); }
+            }
+        }
+        catch (e) { }
+
+        if (!document) {
+            this.warning("No C# document or project is open or selected.");
+            return [undefined, undefined];
+        }
+        const relativePath = vscode.workspace.asRelativePath(document.uri);
+        return [document, relativePath];
     }
 
     private async getDocumentSymbolCodeActions(textDocument: vscode.TextDocument, documentSymbol: vscode.DocumentSymbol): Promise<DocumentSymbolCodeActions> {

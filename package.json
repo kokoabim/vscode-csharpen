@@ -40,28 +40,61 @@
         "commands": [
             {
                 "category": "CSharpen",
-                "title": "Sharpen (Organize) C# File",
+                "title": "Sharpen Document",
                 "command": "kokoabim.csharpen.sharpen-file",
-                "enablement": "editorLangId == 'csharp' && !editorReadonly"
+                "enablement": "editorLangId == csharp || resourceLangId == csharp"
             },
             {
                 "category": "CSharpen",
-                "title": "Remove Unused Usings",
+                "title": "Sharpen All Files In Project",
+                "command": "kokoabim.csharpen.sharpen-project-files",
+                "enablement": "editorLangId == csharp || resourceLangId == csharp || resourceExtname == .csproj"
+            },
+            {
+                "category": "CSharpen",
+                "title": "Remove Unused Using Declarations",
                 "command": "kokoabim.csharpen.remove-unused-usings",
-                "enablement": "editorLangId == 'csharp' && !editorReadonly"
+                "enablement": "editorLangId == csharp || resourceLangId == csharp"
             },
             {
                 "category": "CSharpen",
                 "title": "Output File Diagnostics",
                 "command": "kokoabim.csharpen.output-file-diagnostics",
-                "enablement": "editorLangId != ''"
+                "enablement": "editorLangId != '' || resourceLangId != ''"
+            },
+            {
+                "category": "CSharpen",
+                "title": "Output File Diagnostics For All Files In Project",
+                "command": "kokoabim.csharpen.output-file-diagnostics-for-project-files",
+                "enablement": "editorLangId != '' || resourceLangId != ''"
             }
         ],
+        "menus": {
+            "editor/context": [
+                {
+                    "command": "kokoabim.csharpen.sharpen-file",
+                    "when": "editorLangId == csharp || resourceLangId == csharp",
+                    "group": "1_modification"
+                },
+                {
+                    "command": "kokoabim.csharpen.sharpen-project-files",
+                    "when": "editorLangId == csharp || resourceLangId == csharp || resourceExtname == .csproj",
+                    "group": "1_modification"
+                }
+            ],
+            "explorer/context": [
+                {
+                    "command": "kokoabim.csharpen.sharpen-project-files",
+                    "when": "editorLangId == csharp || resourceLangId == csharp || resourceExtname == .csproj",
+                    "group": "7_modification"
+                }
+            ]
+        },
         "keybindings": [
             {
                 "command": "kokoabim.csharpen.sharpen-file",
                 "key": "shift+alt+cmd+f",
-                "when": "editorTextFocus && editorLangId == 'csharp'"
+                "when": "editorTextFocus && (editorLangId == csharp || resourceLangId == csharp)"
             }
         ],
         "configuration": {
