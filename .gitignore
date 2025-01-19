@@ -5,3 +5,6 @@ releases/
 **/*.vsix
 **/CSharpDotNetProject/**/bin/
 **/CSharpDotNetProject/**/obj/
+
+tests/**/bin/
+tests/**/obj/
