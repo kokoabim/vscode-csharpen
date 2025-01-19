@@ -1,5 +1,10 @@
 ## β Beta
 
+#### 2025-01-19 — 0.2.0
+
+- Added ability to sharpen all files in a project.
+- Added ability to output file diagnostics for all files in a project.
+
 #### 2025-01-18 — 0.1.0
 
 - Added feature to enforce use of file-scoped namespaces on _sharpen_. This can be toggle in settings.

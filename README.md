@@ -43,30 +43,6 @@ _Sharpen_ (organize) current C# file: **⇧**+**⌥**+**⌘**+**f** (macOS) or *
 
 -   _Uh..._ a C# file. 🤷🏼‍♂️
 
-# Extension Settings
-
--   `csharpen.removeUnusedUsingsOnSharpen`
-    -   Remove unused `using` directives on _sharpen_.
--   `csharpen.showFileSizeDifferenceOnSharpen`
-    -   Show the file size difference (in characters) after _sharpening_. This is informational only.
--   `csharpen.formatDocumentOnSharpen`
-    -   Perform the format document command before and after _sharpening_.
-    -   **WARNING:** Leave this enabled to ensure parsing dependability. Disable only for debugging and advanced purposes.
--   `csharpen.namespaceLevelOrganization`
-    -   Namespace-level ordering, sorting and regionalization.
-    -   Properties include: `ordering`, `typeSort`, `regionalization`, `regionThreshold`, `doNotRegionalizeMembersOf`, `doNotRegionalizeTypes`, `onlyRegionalizeMembersOf`, `onlyRegionalizeTypes`
-    -   Editing settings.json will provide IntelliSense popups to help with setting values.
--   `csharpen.typeLevelOrganization`
-    -   Type-level (member and nested type) ordering. sorting and regionalization.
-    -   Properties include: `ordering`, `typeSort`, `regionalization`, `regionThreshold`, `doNotRegionalizeMembersOf`, `doNotRegionalizeTypes`, `onlyRegionalizeMembersOf`, `onlyRegionalizeTypes`
-    -   Editing settings.json will provide IntelliSense popups to help with setting values.
--   `csharpen.regionalizeInterfaceImplementations`
-    -   Regionalize interface implementations by grouping them together within regions.
--   `csharpen.fileFilters`
-    -   Filter files (i.e. ignore) by name and content on _sharpen_.
-    -   Object array properties include: `name`, `pattern`, `fileName`, `matchLogic`, `reason`, `confirmOnDeny`
-    -   Editing settings.json will provide IntelliSense popups to help with setting values.
-
 # Special Handling
 
 The following symbols are specially handled. They are not supported in the settings but are always ordered/sorted in the following:
