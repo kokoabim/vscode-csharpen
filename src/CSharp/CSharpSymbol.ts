@@ -513,7 +513,7 @@ export class CSharpSymbol {
 
         for (const symbol of symbolsToPossiblyMove) {
             for (const parentSymbol of parentSymbols) {
-                if (symbol.fullName.match(`^.*?${parentSymbol.name}\\.${symbol.name}$`) === null) continue;
+                if (symbol.fullName.match(`^.*?${parentSymbol.fullName.replaceAll(".", "\\.")}\\.${symbol.name}$`) === null) continue;
                 symbol.namespace = undefined;
                 symbol.parent = parentSymbol;
                 parentSymbol.children.push(symbol);

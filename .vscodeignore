@@ -3,6 +3,9 @@ media/
 releases/
 src/
 
+**/*.map
+**/*.ts
+
 .eslintrc.json
 .gitignore
 .vscodeignore

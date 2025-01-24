@@ -1,5 +1,9 @@
 ## β Beta
 
+#### 2025-01-24 — 0.2.1
+
+- Fixed issue with properly structuring parent-to-child hierarchy of symbols.
+
 #### 2025-01-19 — 0.2.0
 
 - Added ability to sharpen all files in a project.

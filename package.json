@@ -1,7 +1,7 @@
 {
     "name": "csharpen",
     "publisher": "spencerjames",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "Sharpen (organize) C# files by ordering, sorting and regionalizing symbols.",
     "displayName": "CSharpen — C# File Organizer",
     "shortName": "CSharpen",
@@ -46,7 +46,7 @@
             },
             {
                 "category": "CSharpen",
-                "title": "Sharpen All Files In Project",
+                "title": "Sharpen All Files In Project...",
                 "command": "kokoabim.csharpen.sharpen-project-files",
                 "enablement": "editorLangId == csharp || resourceLangId == csharp || resourceExtname == .csproj"
             },
