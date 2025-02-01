@@ -36,7 +36,6 @@ export class CSharpFile {
     }
 
     static getFileDiagnosticsUsingTextDocument(document: vscode.TextDocument): FileDiagnostic[] {
-        // ? TODO: Use instead?: return vscode.languages.getDiagnostics(document.uri).filter(d => !d.source || d.source === "csharp").map(d => new FileDiagnostic(FileSystem.fileName(document), d));
         return vscode.languages.getDiagnostics(document.uri).map(d => new FileDiagnostic(FileSystem.fileNameUsingTextDocument(document), d));
     }
 
@@ -44,16 +43,16 @@ export class CSharpFile {
         return vscode.languages.getDiagnostics(uri).map(d => new FileDiagnostic(FileSystem.fileNameUsingUri(uri), d));
     }
 
-    static async removeUnusedUsings(textEditor: vscode.TextEditor, textDocument: vscode.TextDocument): Promise<boolean> {
-        const fileDiagnostics = this.getFileDiagnosticsUsingTextDocument(textDocument);
+    static async removeUnusedUsings(textEditor: vscode.TextEditor): Promise<number> {
+        const fileDiagnostics = this.getFileDiagnosticsUsingTextDocument(textEditor.document);
         const unusedUsings = fileDiagnostics.filter(d => d.identifier === FileDiagnosticIdentifier.usingDirectiveUnnecessary);
-        if (unusedUsings.length === 0) return Promise.resolve(false);
+        if (unusedUsings.length === 0) return 0;
 
         const edits = unusedUsings.sort((a, b) => {
             return (a.range.start.line === b.range.start.line) ? b.range.start.character - a.range.start.character : b.range.start.line - a.range.start.line;
         }).map(d => {
             const whitespaceRange = new vscode.Range(d.range.end, new vscode.Position(d.range.end.line + 1, 0));
-            const isWhitespace = textDocument.getText(whitespaceRange).match('^\\s+$');
+            const isWhitespace = textEditor.document.getText(whitespaceRange).match('^\\s+$');
             const textEdit = new vscode.TextEdit(isWhitespace ? new vscode.Range(d.range.start, whitespaceRange.end) : d.range, "");
             return textEdit;
         });
@@ -64,7 +63,7 @@ export class CSharpFile {
             );
         });
 
-        return Promise.resolve(true);
+        return unusedUsings.length;
     }
 
     [util.inspect.custom](): string {

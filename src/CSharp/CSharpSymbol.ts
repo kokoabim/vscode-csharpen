@@ -29,6 +29,7 @@ export class CSharpSymbol {
     private readonly link: { before: CSharpSymbol | undefined, after: CSharpSymbol | undefined } = { before: undefined, after: undefined };
 
     private body = "";
+    private documentSymbol!: vscode.DocumentSymbol;
     private footer = "";
     private fullName!: string;
     private header = "";
@@ -84,6 +85,7 @@ export class CSharpSymbol {
 
     static create(textDocument: vscode.TextDocument, documentSymbol: vscode.DocumentSymbol, parent?: CSharpSymbol): CSharpSymbol {
         const symbol = new CSharpSymbol();
+        symbol.documentSymbol = documentSymbol;
         symbol.range = CSharpSymbol.adjustRange(textDocument, documentSymbol.range, documentSymbol.kind);
         symbol.body = textDocument.getText(symbol.range);
         symbol.fullName = documentSymbol.detail; // FQDN-class name; method name (not FQDN) and parameters; property name
@@ -92,16 +94,18 @@ export class CSharpSymbol {
         symbol.parent = parent;
         symbol.position = documentSymbol.range.start;
         symbol.textDocument = textDocument;
-        symbol.type = CSharpSymbol.symbolTypeFromDocumentSymbol(documentSymbol);
+        symbol.type = CSharpSymbol.symbolTypeFromDocumentSymbol(textDocument, documentSymbol, parent);
         symbol.accessModifier = CSharpSymbol.defaultAccessModifierForType(symbol.type, parent?.type);
 
         CSharpSymbol.parseNameAndNamespace(symbol);
         CSharpSymbol.parseCodeBeforeSymbolName(symbol, symbol.body); // no need to handle boolean return value here
 
         if (symbol.type === CSharpSymbolType.method && symbol.name.includes(".")) symbol.accessModifier = CSharpAccessModifier.explicitInterfaceImplementation;
-        else if (symbol.type === CSharpSymbolType.class && documentSymbol.kind === vscode.SymbolKind.Method && parent && symbol.range.isEqual(parent.range!)) symbol.type = CSharpSymbolType.primaryConstructor;
+        // else if (symbol.type === CSharpSymbolType.class && documentSymbol.kind === vscode.SymbolKind.Method && parent && symbol.range.isEqual(parent.range!)) symbol.type = CSharpSymbolType.primaryConstructor;
 
-        if (documentSymbol.children.length > 0 && symbol.type !== CSharpSymbolType.enum) symbol.children = documentSymbol.children.map(ds => CSharpSymbol.create(textDocument, ds, symbol));
+        if (documentSymbol.children.length > 0 && symbol.type !== CSharpSymbolType.enum) {
+            symbol.children = documentSymbol.children.sort((a, b) => a.range.start.compareTo(b.range.start)).map(ds => CSharpSymbol.create(textDocument, ds, symbol));
+        }
 
         return symbol;
     }
@@ -126,14 +130,15 @@ export class CSharpSymbol {
         let previousSymbol: CSharpSymbol | undefined;
 
         for (const currentSymbol of symbols) {
-            previousBlockEnd = previousSymbol?.range?.end ?? parentOrFileOpenedPosition;
+            previousBlockEnd = previousSymbol && previousSymbol.type !== CSharpSymbolType.primaryConstructor
+                ? previousSymbol.range?.end ?? parentOrFileOpenedPosition
+                : parentOrFileOpenedPosition;
+
             currentBlockStart = currentSymbol.range?.start;
 
             if (!currentBlockStart) throw new Error(`Symbol does not have a range start: type=${CSharpSymbolType[currentSymbol.type]}, fullName=${currentSymbol.fullName}`);
 
-            if (previousBlockEnd > currentBlockStart) {
-                previousBlockEnd = currentBlockStart;
-            }
+            if (previousBlockEnd.isAfter(currentBlockStart)) previousBlockEnd = currentBlockStart;
 
             CSharpSymbol.createNonCodeblock(nonCodeblockSymbols, new vscode.Range(previousBlockEnd, currentBlockStart), currentSymbol, previousSymbol, parent);
 
@@ -152,7 +157,7 @@ export class CSharpSymbol {
 
     /** Creates {@link CSharpSymbol} array of provided {@link documentSymbols}, organizes parent-to-child hierarchy and orders symbols by file position recursively. */
     static createSymbols(textDocument: vscode.TextDocument, documentSymbols: vscode.DocumentSymbol[]): CSharpSymbol[] {
-        const symbols = documentSymbols.map(s => CSharpSymbol.create(textDocument, s));
+        const symbols = documentSymbols.sort((a, b) => a.range.start.compareTo(b.range.start)).map(ds => CSharpSymbol.create(textDocument, ds));
         CSharpSymbol.organizeParentToChildHierarchy(symbols);
         return CSharpSymbol.orderByPosition(symbols);
     }
@@ -737,37 +742,185 @@ export class CSharpSymbol {
         return documentText;
     }
 
-    private static symbolTypeFromDocumentSymbol(documentSymbol: vscode.DocumentSymbol): CSharpSymbolType {
+    private static getCharacterPosition(textDocument: vscode.TextDocument, start: vscode.Position, values: string[], endOrBeginning: vscode.Position | undefined = undefined, canBeAtEndOrBeginningOfDepth = false, direction = 1): [vscode.Position | undefined, string | undefined] {
+        if (direction > 0) direction = 1;
+        else direction = -1;
+
+        let depth = 0;
+        let inQuote = false;
+        let inMultiLineComment = false;
+        let currentPosition = start;
+        let matchedValue: string | undefined;
+
+        let nextPosition = CSharpSymbol.movePosition(textDocument, currentPosition, direction);
+
+        const firstCharOfValues = values.map(v => v[0]);
+
+        while (textDocument.validatePosition(nextPosition)) {
+            const currentChar = textDocument.getText(new vscode.Range(currentPosition, nextPosition));
+            let moveToNextLine = false;
+            let checkCharacter = false;
+
+            if (currentChar === "\"" && !inMultiLineComment) {
+                const previousChar = textDocument.getText(new vscode.Range(CSharpSymbol.movePosition(textDocument, currentPosition, -1), currentPosition));
+                if (previousChar !== "\\") {
+                    inQuote = !inQuote;
+                }
+                else if (direction === -1) {
+                    nextPosition = CSharpSymbol.movePosition(textDocument, nextPosition, direction); // skip previous '\' in reverse
+                }
+            }
+            else if (!inQuote) {
+                if (!inMultiLineComment) {
+                    if (depth === 0 && firstCharOfValues.includes(currentChar)) {
+                        checkCharacter = true;
+                    }
+                    else if (currentChar === "<" || currentChar === "[" || currentChar === "(") {
+                        depth = depth + direction;
+                    }
+                    else if (currentChar === ">" || currentChar === "]" || currentChar === ")") {
+                        depth = depth - direction;
+                    }
+                    else if (currentChar === "/") {
+                        const nextOrPreviousCharPosition = CSharpSymbol.movePosition(textDocument, currentPosition, direction);
+                        const nextOrPreviousChar = textDocument.getText(new vscode.Range(nextPosition, nextOrPreviousCharPosition));
+
+                        if (nextOrPreviousChar === "/") {
+                            if (direction === 1) moveToNextLine = true;
+                            else nextPosition = nextOrPreviousCharPosition; // skip previous '/' in reverse
+                        }
+                        else if (nextOrPreviousChar === "*") {
+                            inMultiLineComment = true;
+                            nextPosition = nextOrPreviousCharPosition; // skip next/previous '*'
+                        }
+                    }
+                }
+                else if (inMultiLineComment && currentChar === "*") {
+                    const nextOrPreviousCharPosition = CSharpSymbol.movePosition(textDocument, currentPosition, direction);
+                    const nextOrPreviousChar = textDocument.getText(new vscode.Range(nextPosition, nextOrPreviousCharPosition));
+                    if (nextOrPreviousChar === "/") {
+                        inMultiLineComment = false;
+                        nextPosition = nextOrPreviousCharPosition; // skip next/previous '/'
+                    }
+                }
+            }
+
+            if ((checkCharacter || (canBeAtEndOrBeginningOfDepth && !inQuote && !inMultiLineComment)) && depth === 0 && firstCharOfValues.includes(currentChar)) {
+                const index = values.findIndex(v => v.startsWith(currentChar));
+                matchedValue = values[index];
+
+                if (matchedValue.length === 1) break;
+
+                const currentPositionCharacters = textDocument.getText(new vscode.Range(direction === 1 ? currentPosition : nextPosition, CSharpSymbol.movePosition(textDocument, direction === 1 ? currentPosition : nextPosition, matchedValue.length)));
+                if (currentPositionCharacters === matchedValue) break;
+                else matchedValue = undefined;
+            }
+
+            if (currentChar === "" || moveToNextLine) {
+                // EOL
+                currentPosition = new vscode.Position(currentPosition.line + 1, 0);
+                nextPosition = new vscode.Position(currentPosition.line, 1);
+            }
+            else {
+                currentPosition = nextPosition;
+                nextPosition = CSharpSymbol.movePosition(textDocument, nextPosition, direction);
+            }
+
+            if (endOrBeginning && (direction === 1 && currentPosition.isAfterOrEqual(endOrBeginning) || direction === -1 && currentPosition.isBeforeOrEqual(endOrBeginning))) {
+                return [undefined, undefined];
+            }
+        }
+
+        return [direction === 1 ? currentPosition : nextPosition, matchedValue];
+    }
+
+    private static movePosition(textDocument: vscode.TextDocument, position: vscode.Position, offset: number): vscode.Position {
+        if (offset === 0) return position;
+
+        const forward = offset > 0;
+        if (!forward) offset *= -1;
+
+        for (let i = 0; i < offset; i++) {
+            if (forward) {
+                const nextChar = position.translate(0, 1);
+
+                if (textDocument.lineAt(position.line).range.contains(nextChar)) {
+                    position = nextChar;
+                }
+                else {
+                    position = new vscode.Position(position.line + 1, 0);
+                }
+            }
+            else {
+                if (position.character > 0) {
+                    position = position.translate(0, -1);
+                }
+                else {
+                    const prevLine = position.line - 1;
+                    position = new vscode.Position(prevLine, textDocument.lineAt(prevLine).range.end.character);
+                }
+            }
+        }
+
+        return position;
+    }
+
+    private static isPrimaryConstructor(documentSymbol: vscode.DocumentSymbol, parentSymbol: vscode.DocumentSymbol): boolean {
+        return documentSymbol.kind === vscode.SymbolKind.Method && documentSymbol.name === ".ctor" && parentSymbol.selectionRange.start.isEqual(documentSymbol.selectionRange.start);
+    }
+
+    private static isDelegate(textDocument: vscode.TextDocument, documentSymbol: vscode.DocumentSymbol): boolean {
+        return documentSymbol.kind === vscode.SymbolKind.Method
+            && CSharpPatterns.isMatch(textDocument.getText(new vscode.Range(documentSymbol.range.start, documentSymbol.selectionRange.start)), CSharpPatterns.delegateKeyword);
+    }
+
+    private static isEventMethod(documentSymbol: vscode.DocumentSymbol): boolean {
+        return documentSymbol.kind === vscode.SymbolKind.Method
+            && ((documentSymbol.name.startsWith("add_") && documentSymbol.detail.endsWith(".add"))
+                || (documentSymbol.name.startsWith("remove_") && documentSymbol.detail.endsWith(".remove")));
+    }
+
+    private static isRecord(textDocument: vscode.TextDocument, documentSymbol: vscode.DocumentSymbol): boolean {
+        const [valuePosition, matchedValue] = CSharpSymbol.getCharacterPosition(textDocument, documentSymbol.selectionRange.start, ["record"], documentSymbol.range.start, false, -1);
+        return valuePosition !== undefined && matchedValue === "record";
+    }
+
+    private static symbolTypeFromDocumentSymbol(textDocument: vscode.TextDocument, documentSymbol: vscode.DocumentSymbol, parentSymbol: CSharpSymbol | undefined): CSharpSymbolType {
         switch (documentSymbol.kind) {
-            case vscode.SymbolKind.Namespace: return CSharpSymbolType.namespace;
-
-            case vscode.SymbolKind.Class: return CSharpSymbolType.class;
-            case vscode.SymbolKind.Interface: return CSharpSymbolType.interface;
-            case vscode.SymbolKind.Enum: return CSharpSymbolType.enum;
-            case vscode.SymbolKind.Struct: return CSharpSymbolType.struct;
-
-            case vscode.SymbolKind.Event: return CSharpSymbolType.event;
             case vscode.SymbolKind.Constant: return CSharpSymbolType.constant;
+            case vscode.SymbolKind.Constructor: return CSharpSymbolType.constructor;
+            case vscode.SymbolKind.Enum: return CSharpSymbolType.enum;
+            case vscode.SymbolKind.Event: return CSharpSymbolType.event;
+            case vscode.SymbolKind.Field: return CSharpSymbolType.field;
+            case vscode.SymbolKind.File: return CSharpSymbolType.file;
+            case vscode.SymbolKind.Interface: return CSharpSymbolType.interface;
+            case vscode.SymbolKind.Namespace: return CSharpSymbolType.namespace;
+            case vscode.SymbolKind.Operator: return CSharpSymbolType.operator;
+
+            case vscode.SymbolKind.Class:
+                if (CSharpSymbol.isRecord(textDocument, documentSymbol)) return CSharpSymbolType.recordClass;
+                else return CSharpSymbolType.class;
+
+            case vscode.SymbolKind.Struct:
+                if (CSharpSymbol.isRecord(textDocument, documentSymbol)) return CSharpSymbolType.recordStruct;
+                else return CSharpSymbolType.struct;
 
             case vscode.SymbolKind.Property:
                 if (documentSymbol.name.endsWith("this[]")) return CSharpSymbolType.indexer;
                 else return CSharpSymbolType.property;
 
-            case vscode.SymbolKind.Field: return CSharpSymbolType.field;
-
-            case vscode.SymbolKind.Constructor: return CSharpSymbolType.constructor;
-
             case vscode.SymbolKind.Method:
-                if (documentSymbol.name === ".ctor") return CSharpSymbolType.constructor;
+                if (documentSymbol.name === ".ctor") {
+                    if (parentSymbol && CSharpSymbol.isPrimaryConstructor(documentSymbol, parentSymbol.documentSymbol)) { return CSharpSymbolType.primaryConstructor; }
+                    else { return CSharpSymbolType.constructor; }
+                }
                 else if (documentSymbol.name === "Finalize" && documentSymbol.detail.startsWith("~")) return CSharpSymbolType.finalizer;
                 else if (documentSymbol.name === ".cctor") { return CSharpSymbolType.staticConstructor; }
+                else if (CSharpSymbol.isDelegate(textDocument, documentSymbol)) { return CSharpSymbolType.delegate; }
+                else if (CSharpSymbol.isEventMethod(documentSymbol)) { return CSharpSymbolType.none; }
                 else { return CSharpSymbolType.method; }
 
-            case vscode.SymbolKind.Operator: return CSharpSymbolType.operator;
-
-            case vscode.SymbolKind.File: return CSharpSymbolType.file;
-
-            default: throw new Error(`Unknown symbol kind: ${vscode.SymbolKind[documentSymbol.kind]} (${documentSymbol.kind})`);
+            default: throw new Error(`Unsupported symbol kind: ${vscode.SymbolKind[documentSymbol.kind]} (${documentSymbol.kind})`);
         }
     }
 
@@ -787,7 +940,7 @@ export class CSharpSymbol {
             case "record class":
                 return CSharpSymbolType.recordClass;
 
-            default: throw new Error(`Unknown symbol type string: ${string}`);
+            default: throw new Error(`Unsupported symbol type string: ${string}`);
         }
     }
 

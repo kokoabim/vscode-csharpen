@@ -29,6 +29,8 @@ export class CSharpenVSCodeExtensionSettings extends VSCodeExtensionSettings {
 
     allowSharpenWithFileDiagnosticErrors = false;
     enforceFileScopedNamespaces = true;
+    delayBeforeRemovingUnusedUsingDirectives = 0;
+    doNotRemoveThesePackageReferences: string[] = [];
     fileFilters: FileFilter[] = [];
     formatDocumentOnSharpen = true;
     indentation!: string;
@@ -78,6 +80,8 @@ export class CSharpenVSCodeExtensionSettings extends VSCodeExtensionSettings {
         if (fileFilters) settings.fileFilters = fileFilters.map(ff => new FileFilter(ff));
 
         settings.allowSharpenWithFileDiagnosticErrors = settings.get<boolean>("allowSharpenWithFileDiagnosticErrors") ?? false;
+        settings.delayBeforeRemovingUnusedUsingDirectives = settings.get<number>("delayBeforeRemovingUnusedUsingDirectives") ?? 0;
+        settings.doNotRemoveThesePackageReferences = settings.get<string[]>("doNotRemoveThesePackageReferences") ?? [];
         settings.enforceFileScopedNamespaces = settings.get<boolean>("enforceFileScopedNamespaces") ?? true;
         settings.formatDocumentOnSharpen = settings.get<boolean>("formatDocumentOnSharpen") ?? true;
         settings.quickFixFilters = settings.get<string[]>("quickFixFilters") ?? [];

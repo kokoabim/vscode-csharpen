@@ -10,6 +10,7 @@ export class CSharpPatterns {
 
     static readonly attributes = `(?<attributes>(\\s*\\[.+\\]\\s*)*)?`;
     static readonly closePreprocessorDirectives = new RegExp("^(?<text>[ \\t]*#[ \\t]*(endif|pragma).*?)\\r?\\n", "gm");
+    static readonly delegateKeyword = "\\bdelegate\\b";
     static readonly implementsRegExp = new RegExp(`\\s*(?<type>${CSharpPatterns.anyType})(\\s*,\\s*)?`, "g");
     static readonly modifiers = "(?<modifiers>(\\s*(new|public|protected|private|internal|protected\\s+internal|private\\s+protected|file|static|extern|virtual|partial|abstract|sealed|override|readonly|unsafe|volatile|async|required)\\s+)*)?";
     static readonly multiLineCommentRegExp = new RegExp("(?<text>/\\*.*?\\*/)", "gs");
@@ -24,4 +25,8 @@ export class CSharpPatterns {
     static readonly symbolTypeWithReturnTypeKeywords = `(?<keywords>(delegate\\s+${this.anyType}|event\\s+${this.anyType}|const\\s+${this.anyType}|(explicit|implicit)\\s+operator\\s+${this.anyType}|${this.anyType}\\s+operator))`;
     static readonly usingDirectiveRegExp = new RegExp(`^(?<directive>[ \\t]*(?<g>global\\s+)?using\\s+(?<s>static\\s+)?((?<name>${CSharpPatterns.name})\\s*=\\s*)?(?<namespace>${CSharpPatterns.namespace})\\s*;[\\r\\n]*)`, "gm");
     static readonly xmlCommentRegExp = new RegExp("^(?<text>[ \\t]*(///.*?[\\r\\n]*)+)$", "gm");
+
+    static isMatch(target: string, pattern: string): boolean {
+        return target.match(pattern) !== null;
+    }
 }

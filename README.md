@@ -4,9 +4,23 @@
 
 _Sharpen_ (or organize) C# files by ordering, sorting and regionalizing symbols (i.e. directives, declarations, types and members) by access level, name and type.
 
+Commands:
+- Current file: "Sharpen Document" (`kokoabim.csharpen.sharpen-file`)
+- Project files: "Sharpen All Files In Project..." (`kokoabim.csharpen.sharpen-project-files`)
+
+## Remove Unused Package References (NuGet)
+
+<p style="text-align:center;"><span style="font-size:1.25em;font-weight:bold;">IN PREVIEW</span><br/>Experimental (Though Can Be Undone)</p>
+
+Remove unused package references (NuGet) from one or more projects. This also removes unused `using` directives.
+
+Command: "Remove Unused References Of Project..." (`kokoabim.csharpen.remove-unused-references`)
+
 ## Remove Unused Using Directives
 
 Remove unused `using` directives (either when _sharpening_ a file or using a standalone command).
+
+Command: "Remove Unused Using Declarations" (`kokoabim.csharpen.remove-unused-usings`)
 
 ## Regionalize by Access Modifier and Type
 
