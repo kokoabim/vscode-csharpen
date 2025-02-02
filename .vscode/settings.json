@@ -8,6 +8,7 @@
     "typescript.tsc.autoDetect": "on",
     "cSpell.ignoreWords": [
         "SYSLIB",
+        "Toste",
         "cctor",
         "copyfiles",
         "elif",

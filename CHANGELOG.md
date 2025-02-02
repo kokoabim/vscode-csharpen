@@ -1,5 +1,9 @@
 ## β Beta
 
+#### 2025-02-02 — 0.4.2
+
+-   Fixed edge case issue where no using directives or namespace exists in a file with a class.
+
 #### 2025-02-02 — 0.4.1
 
 -   Minor improvements and fixes to parsing symbols, mostly relating to primary constructors.

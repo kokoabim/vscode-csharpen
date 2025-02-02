@@ -603,9 +603,12 @@ export class CSharpSymbol {
                 if (position.character > 0) {
                     position = position.translate(0, -1);
                 }
-                else {
+                else if (position.line > 0) {
                     const prevLine = position.line - 1;
                     position = new vscode.Position(prevLine, textDocument.lineAt(prevLine).range.end.character);
+                }
+                else {
+                    return position;
                 }
             }
         }
