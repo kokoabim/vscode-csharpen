@@ -1,7 +1,7 @@
 {
     "name": "csharpen",
     "publisher": "spencerjames",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "description": "Sharpen (organize) C# files by ordering, sorting and regionalizing symbols.",
     "displayName": "CSharpen — C# File Organizer",
     "shortName": "CSharpen",
@@ -73,6 +73,12 @@
                 "title": "Output File Diagnostics For All Files In Project...",
                 "command": "kokoabim.csharpen.output-file-diagnostics-for-project-files",
                 "enablement": "editorLangId != '' || resourceLangId != ''"
+            },
+            {
+                "category": "CSharpen",
+                "title": "Create CSharpen workspace settings file...",
+                "command": "kokoabim.csharpen.create-workspace-settings-file",
+                "enablement": "workspaceFolderCount > 0"
             }
         ],
         "menus": {
@@ -210,8 +216,8 @@
                         "regionThreshold": {
                             "type": "integer",
                             "minimum": 0,
-                            "markdownDescription": "Number of members must exceed this threshold to be regionalized. Default is `2`.",
-                            "default": 2
+                            "markdownDescription": "Number of members must exceed this threshold to be regionalized. Default is `5`.",
+                            "default": 5
                         },
                         "doNotRegionalizeMembersOf": {
                             "markdownDescription": "Do not regionalize members of specified types. Default is `[interface]`.",
@@ -307,7 +313,7 @@
                         "regionalization": [
                             "type"
                         ],
-                        "regionThreshold": 2,
+                        "regionThreshold": 5,
                         "doNotRegionalizeMembersOf": [
                             "interface"
                         ],
@@ -401,8 +407,8 @@
                         "regionThreshold": {
                             "type": "integer",
                             "minimum": 0,
-                            "markdownDescription": "Number of members must exceed this threshold to be regionalized. Default is `2`.",
-                            "default": 2
+                            "markdownDescription": "Number of members must exceed this threshold to be regionalized. Default is `5`.",
+                            "default": 5
                         },
                         "doNotRegionalizeMembersOf": {
                             "markdownDescription": "Do not regionalize members of specified types. Default is `[interface]`.",
@@ -536,7 +542,7 @@
                         "regionalization": [
                             "type"
                         ],
-                        "regionThreshold": 2,
+                        "regionThreshold": 5,
                         "doNotRegionalizeMembersOf": [
                             "interface"
                         ],
@@ -675,14 +681,14 @@
                         "uniqueItems": true
                     },
                     "default": [
-                        "coverlet.collector",
-                        "coverlet.msbuild",
-                        "Microsoft.NET.Sdk",
-                        "Microsoft.NET.Sdk.Web",
-                        "Microsoft.NET.Test.Sdk",
-                        "Microsoft.EntityFrameworkCore.Design;Microsoft.EntityFrameworkCore",
-                        "Microsoft.EntityFrameworkCore.Tools;Microsoft.EntityFrameworkCore",
-                        "xunit.runner.visualstudio"
+                        "coverlet\\.collector",
+                        "coverlet\\.msbuild",
+                        "Microsoft\\.NET\\.Sdk",
+                        "Microsoft\\.NET\\.Sdk\\.Web",
+                        "Microsoft\\.NET\\.Test\\.Sdk",
+                        "Microsoft\\.EntityFrameworkCore\\.Design;Microsoft\\.EntityFrameworkCore",
+                        "Microsoft\\.EntityFrameworkCore\\.Tools;Microsoft\\.EntityFrameworkCore",
+                        "xunit\\.runner\\.visualstudio"
                     ]
                 },
                 "csharpen.delayBeforeRemovingUnusedUsingDirectives": {
@@ -690,6 +696,12 @@
                     "markdownDescription": "Delay (in milliseconds) before removing unused `using` directives when removing package references.",
                     "type": "integer",
                     "default": 300
+                },
+                "csharpen.sharpenFilesWhenRemovingUnusedReferences": {
+                    "order": 12,
+                    "markdownDescription": "_Sharpen_ files when removing unused references.",
+                    "type": "boolean",
+                    "default": false
                 }
             }
         }

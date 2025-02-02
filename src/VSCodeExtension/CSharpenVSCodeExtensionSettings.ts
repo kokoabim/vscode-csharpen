@@ -1,60 +1,195 @@
+import * as fs from "fs/promises";
 import { CSharpOrganizeSettings } from "../CSharp/CSharpOrganizeSettings";
 import { FileFilter } from "../Models/FileFilter";
+import { CSharpenWorkspaceSettings } from "./CSharpenWorkspaceSettings";
 import { VSCodeExtensionSettings } from "./VSCodeExtensionSettings";
 import * as vscode from 'vscode';
 
 export class CSharpenVSCodeExtensionSettings extends VSCodeExtensionSettings {
-    static readonly regionalizableGenericInterfaceImplementations = [
-        "IList",
-        "ICollection",
-        "IEnumerable",
-
-        "IComparable",
-        "IEqualityComparer",
-        "IEquatable",
-    ];
-    static readonly regionalizableInterfaceImplementations = [
-        "IDisposable",
-        "IAsyncDisposable",
-
-        "IList",
-        "ICollection",
-        "IEnumerable",
-
-        "ICloneable",
-        "IComparable",
-        "IConvertible",
-        "IFormattable",
-    ];
+    // ! IMPORTANT: update function readConfigurations() below and class CSharpenWorkspaceSettings if new settings are added
 
     allowSharpenWithFileDiagnosticErrors = false;
+    delayBeforeRemovingUnusedUsingDirectives = 300;
+    doNotRemoveThesePackageReferences = CSharpenVSCodeExtensionSettings.defaultDoNotRemoveThesePackageReferences;
     enforceFileScopedNamespaces = true;
-    delayBeforeRemovingUnusedUsingDirectives = 0;
-    doNotRemoveThesePackageReferences: string[] = [];
-    fileFilters: FileFilter[] = [];
+    fileFilters = CSharpenVSCodeExtensionSettings.defaultFileFilters;
     formatDocumentOnSharpen = true;
-    indentation!: string;
-    namespaceLevelOrganization = new CSharpOrganizeSettings();
-    quickFixFilters: string[] = [];
-    regionalizeInterfaceImplementations: string[] = [];
+    indentation!: string; // not read from extension setting but from editor settings
+    namespaceLevelOrganization = CSharpOrganizeSettings.defaultNamespaceLevelOrganization;
+    quickFixFilters = CSharpenVSCodeExtensionSettings.defaultQuickFixFilters;
+    regionalizeInterfaceImplementations = CSharpenVSCodeExtensionSettings.getRegionalizeInterfaceImplementations(["*"]);
     removeUnusedUsingsOnSharpen = true;
-    showFileSizeDifferenceOnSharpen = false;
-    typeLevelOrganization = new CSharpOrganizeSettings();
+    sharpenFilesWhenRemovingUnusedReferences = false;
+    showFileSizeDifferenceOnSharpen = true;
+    typeLevelOrganization = CSharpOrganizeSettings.defaultTypeLevelOrganization;
 
     protected readonly configurationSection = "csharpen";
 
     private static _shared: CSharpenVSCodeExtensionSettings;
 
-    private constructor() {
+    constructor(readConfigurations = true, doNotUseWorkspaceSettings = false) {
         super();
-        CSharpenVSCodeExtensionSettings.readConfigurations(this);
+        if (readConfigurations) CSharpenVSCodeExtensionSettings.readConfigurations(this, doNotUseWorkspaceSettings);
     }
 
-    static shared(refresh = false): CSharpenVSCodeExtensionSettings {
-        if (!this._shared) CSharpenVSCodeExtensionSettings._shared = new CSharpenVSCodeExtensionSettings();
-        else if (refresh) CSharpenVSCodeExtensionSettings.readConfigurations(CSharpenVSCodeExtensionSettings._shared);
+    static get defaultDoNotRemoveThesePackageReferences() {
+        return [
+            "coverlet.collector",
+            "coverlet.msbuild",
+            "Microsoft.NET.Sdk",
+            "Microsoft.NET.Sdk.Web",
+            "Microsoft.NET.Test.Sdk",
+            "Microsoft.EntityFrameworkCore.Design;Microsoft.EntityFrameworkCore",
+            "Microsoft.EntityFrameworkCore.Tools;Microsoft.EntityFrameworkCore",
+            "xunit.runner.visualstudio"
+        ];
+    }
+
+    static get defaultFileFilters() {
+        return [
+            {
+                "confirmOnDeny": false,
+                "fileName": "/[Pp]rogram\\.cs$",
+                "matchLogic": false,
+                "name": "ProgramClass",
+                "pattern": "\\bclass\\s+Program\\s*\\{",
+                "reason": "Program.cs requires a Program class"
+            },
+            {
+                "confirmOnDeny": false,
+                "fileName": "/[Pp]rogram\\.cs$",
+                "matchLogic": false,
+                "name": "ProgramClassMainMethod",
+                "pattern": "\\bstatic\\s+((void)|(int)|((System\\.)?Int32)|(async\\s+Task(<((int)|((System\\.)?Int32))>)?))\\s+Main\\s*\\(.*?\\)",
+                "reason": "Program class requires a static Main method"
+            },
+            {
+                "confirmOnDeny": true,
+                "matchLogic": true,
+                "name": "PreprocessorDirective:#elif",
+                "pattern": "\\n\\s*?#elif\\s+.*?[\\r\\n]+",
+                "reason": "Preprocessor directive #elif is detected. If outside of type members, it may cause unexpected behavior."
+            },
+            {
+                "confirmOnDeny": true,
+                "matchLogic": true,
+                "name": "PreprocessorDirective:#else",
+                "pattern": "\\n\\s*?#else\\s*?[\\r\\n]+",
+                "reason": "Preprocessor directive #else is detected. If outside of type members, it may cause unexpected behavior."
+            }
+        ] as FileFilter[];
+    }
+
+    static get defaultQuickFixFilters() {
+        return [
+            "^Fix All",
+            "^Suppress or configure issues",
+            "^Convert to block scoped namespace",
+            "^Use primary constructor",
+            "^Add braces",
+            "^Use block body for method",
+            "^Use explicit type instead of 'var'",
+            "^Fix using Copilot",
+            "^Explain using Copilot"
+        ];
+    }
+
+    static get regionalizableGenericInterfaceImplementations() {
+        return [
+            "IList",
+            "ICollection",
+            "IEnumerable",
+
+            "IComparable",
+            "IEqualityComparer",
+            "IEquatable",
+        ];
+    }
+
+    static get regionalizableInterfaceImplementations() {
+        return [
+            "IDisposable",
+            "IAsyncDisposable",
+
+            "IList",
+            "ICollection",
+            "IEnumerable",
+
+            "ICloneable",
+            "IComparable",
+            "IConvertible",
+            "IFormattable",
+        ];
+    }
+
+    static createWorkspaceSettingsFromExtensionSettings(useDefaults = false): CSharpenWorkspaceSettings {
+        const extensionSettings = new CSharpenVSCodeExtensionSettings(!useDefaults, true);
+
+        const workspaceSettings = new CSharpenWorkspaceSettings();
+        workspaceSettings.allowSharpenWithFileDiagnosticErrors = extensionSettings.allowSharpenWithFileDiagnosticErrors;
+        workspaceSettings.delayBeforeRemovingUnusedUsingDirectives = extensionSettings.delayBeforeRemovingUnusedUsingDirectives;
+        workspaceSettings.doNotRemoveThesePackageReferences = extensionSettings.doNotRemoveThesePackageReferences;
+        workspaceSettings.enforceFileScopedNamespaces = extensionSettings.enforceFileScopedNamespaces;
+        workspaceSettings.fileFilters = extensionSettings.fileFilters;
+        workspaceSettings.formatDocumentOnSharpen = extensionSettings.formatDocumentOnSharpen;
+        workspaceSettings.namespaceLevelOrganization = extensionSettings.namespaceLevelOrganization;
+        workspaceSettings.quickFixFilters = extensionSettings.quickFixFilters;
+        workspaceSettings.regionalizeInterfaceImplementations = extensionSettings.regionalizeInterfaceImplementations;
+        workspaceSettings.removeUnusedUsingsOnSharpen = extensionSettings.removeUnusedUsingsOnSharpen;
+        workspaceSettings.sharpenFilesWhenRemovingUnusedReferences = extensionSettings.sharpenFilesWhenRemovingUnusedReferences;
+        workspaceSettings.showFileSizeDifferenceOnSharpen = extensionSettings.showFileSizeDifferenceOnSharpen;
+        workspaceSettings.typeLevelOrganization = extensionSettings.typeLevelOrganization;
+
+        return workspaceSettings;
+    }
+
+    static overrideValues(extensionSettings: CSharpenVSCodeExtensionSettings, workspaceSettings: CSharpenWorkspaceSettings): CSharpenVSCodeExtensionSettings {
+        if (workspaceSettings.allowSharpenWithFileDiagnosticErrors !== undefined) extensionSettings.allowSharpenWithFileDiagnosticErrors = workspaceSettings.allowSharpenWithFileDiagnosticErrors;
+        if (workspaceSettings.delayBeforeRemovingUnusedUsingDirectives !== undefined) extensionSettings.delayBeforeRemovingUnusedUsingDirectives = workspaceSettings.delayBeforeRemovingUnusedUsingDirectives;
+        if (workspaceSettings.doNotRemoveThesePackageReferences !== undefined) extensionSettings.doNotRemoveThesePackageReferences = workspaceSettings.doNotRemoveThesePackageReferences;
+        if (workspaceSettings.enforceFileScopedNamespaces !== undefined) extensionSettings.enforceFileScopedNamespaces = workspaceSettings.enforceFileScopedNamespaces;
+        if (workspaceSettings.fileFilters !== undefined) extensionSettings.fileFilters = workspaceSettings.fileFilters;
+        if (workspaceSettings.formatDocumentOnSharpen) extensionSettings.formatDocumentOnSharpen = workspaceSettings.formatDocumentOnSharpen;
+        if (workspaceSettings.namespaceLevelOrganization !== undefined) extensionSettings.namespaceLevelOrganization = workspaceSettings.namespaceLevelOrganization;
+        if (workspaceSettings.quickFixFilters !== undefined) extensionSettings.quickFixFilters = workspaceSettings.quickFixFilters;
+        if (workspaceSettings.regionalizeInterfaceImplementations !== undefined) extensionSettings.regionalizeInterfaceImplementations = workspaceSettings.regionalizeInterfaceImplementations;
+        if (workspaceSettings.removeUnusedUsingsOnSharpen !== undefined) extensionSettings.removeUnusedUsingsOnSharpen = workspaceSettings.removeUnusedUsingsOnSharpen;
+        if (workspaceSettings.sharpenFilesWhenRemovingUnusedReferences !== undefined) extensionSettings.sharpenFilesWhenRemovingUnusedReferences = workspaceSettings.sharpenFilesWhenRemovingUnusedReferences;
+        if (workspaceSettings.showFileSizeDifferenceOnSharpen !== undefined) extensionSettings.showFileSizeDifferenceOnSharpen = workspaceSettings.showFileSizeDifferenceOnSharpen;
+        if (workspaceSettings.typeLevelOrganization !== undefined) extensionSettings.typeLevelOrganization = workspaceSettings.typeLevelOrganization;
+
+        return extensionSettings;
+    }
+
+    static shared(refresh = false, doNotUseWorkspaceSettings = false): CSharpenVSCodeExtensionSettings {
+        if (!this._shared) CSharpenVSCodeExtensionSettings._shared = new CSharpenVSCodeExtensionSettings(true, doNotUseWorkspaceSettings);
+        else if (refresh) CSharpenVSCodeExtensionSettings.readConfigurations(CSharpenVSCodeExtensionSettings._shared, doNotUseWorkspaceSettings);
 
         return this._shared;
+    }
+
+    static async writeWorkspaceFileUsingSettings(): Promise<boolean> {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!workspaceFolder) return false;
+
+        const workspaceSettings = this.createWorkspaceSettingsFromExtensionSettings();
+
+        const filePath = workspaceFolder + "/" + CSharpenWorkspaceSettings.fileName;
+        await fs.writeFile(filePath, JSON.stringify(workspaceSettings, null, 4));
+
+        return true;
+    }
+
+    static async writeWorkspaceFileWithDefaults(): Promise<boolean> {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!workspaceFolder) return false;
+
+        const defaultWorkspaceSettings = CSharpenVSCodeExtensionSettings.createWorkspaceSettingsFromExtensionSettings(true);
+
+        const filePath = workspaceFolder + "/" + CSharpenWorkspaceSettings.fileName;
+        await fs.writeFile(filePath, JSON.stringify(defaultWorkspaceSettings, null, 4));
+
+        return true;
     }
 
     private static assignFromConfiguration(settings: CSharpOrganizeSettings, fromConfiguration: CSharpOrganizeSettings | undefined) {
@@ -70,7 +205,23 @@ export class CSharpenVSCodeExtensionSettings extends VSCodeExtensionSettings {
         }
     }
 
-    private static readConfigurations(settings: CSharpenVSCodeExtensionSettings): void {
+    private static getRegionalizeInterfaceImplementations(regionalizeInterfaceImplementations: string[]): string[] {
+        if (regionalizeInterfaceImplementations.includes("*")) {
+            regionalizeInterfaceImplementations = [...new Set(CSharpenVSCodeExtensionSettings.regionalizableInterfaceImplementations.concat(...CSharpenVSCodeExtensionSettings.regionalizableGenericInterfaceImplementations))];
+        }
+        else if (regionalizeInterfaceImplementations.length > 0) {
+            if (regionalizeInterfaceImplementations.includes("IList")) regionalizeInterfaceImplementations = [...new Set(regionalizeInterfaceImplementations.concat(...["ICollection", "IEnumerable"]))];
+            else if (regionalizeInterfaceImplementations.includes("ICollection")) regionalizeInterfaceImplementations = [...new Set(regionalizeInterfaceImplementations.concat(...["IEnumerable"]))];
+        }
+
+        if (regionalizeInterfaceImplementations.includes("IDisposable") && regionalizeInterfaceImplementations.includes("IAsyncDisposable")) {
+            regionalizeInterfaceImplementations.splice(regionalizeInterfaceImplementations.indexOf("IAsyncDisposable"), 1); // IAsyncDisposable is covered by IDisposable
+        }
+
+        return regionalizeInterfaceImplementations;
+    }
+
+    private static readConfigurations(settings: CSharpenVSCodeExtensionSettings, doNotUseWorkspaceSettings = false): void {
         const editorConfig = vscode.workspace.getConfiguration("editor");
         settings.indentation = editorConfig.get("insertSpaces") as boolean ? " ".repeat(editorConfig.get("tabSize") as number) : "\t";
 
@@ -87,21 +238,17 @@ export class CSharpenVSCodeExtensionSettings extends VSCodeExtensionSettings {
         settings.quickFixFilters = settings.get<string[]>("quickFixFilters") ?? [];
         settings.regionalizeInterfaceImplementations = settings.get<string[]>("regionalizeInterfaceImplementations") ?? [];
         settings.removeUnusedUsingsOnSharpen = settings.get<boolean>("removeUnusedUsingsOnSharpen") ?? true;
+        settings.sharpenFilesWhenRemovingUnusedReferences = settings.get<boolean>("sharpenFilesWhenRemovingUnusedReferences") ?? false;
         settings.showFileSizeDifferenceOnSharpen = settings.get<boolean>("showFileSizeDifferenceOnSharpen") ?? false;
 
-        if (settings.regionalizeInterfaceImplementations.includes("*")) {
-            settings.regionalizeInterfaceImplementations = [...new Set(CSharpenVSCodeExtensionSettings.regionalizableInterfaceImplementations.concat(...CSharpenVSCodeExtensionSettings.regionalizableGenericInterfaceImplementations))];
-        }
-        else if (settings.regionalizeInterfaceImplementations.length > 0) {
-            if (settings.regionalizeInterfaceImplementations.includes("IList")) settings.regionalizeInterfaceImplementations = [...new Set(settings.regionalizeInterfaceImplementations.concat(...["ICollection", "IEnumerable"]))];
-            else if (settings.regionalizeInterfaceImplementations.includes("ICollection")) settings.regionalizeInterfaceImplementations = [...new Set(settings.regionalizeInterfaceImplementations.concat(...["IEnumerable"]))];
-        }
-
-        if (settings.regionalizeInterfaceImplementations.includes("IDisposable") && settings.regionalizeInterfaceImplementations.includes("IAsyncDisposable")) {
-            settings.regionalizeInterfaceImplementations.splice(settings.regionalizeInterfaceImplementations.indexOf("IAsyncDisposable"), 1); // IAsyncDisposable is covered by IDisposable
-        }
+        settings.regionalizeInterfaceImplementations = CSharpenVSCodeExtensionSettings.getRegionalizeInterfaceImplementations(settings.regionalizeInterfaceImplementations);
 
         CSharpenVSCodeExtensionSettings.assignFromConfiguration(settings.namespaceLevelOrganization, settings.get<CSharpOrganizeSettings>("namespaceLevelOrganization"));
         CSharpenVSCodeExtensionSettings.assignFromConfiguration(settings.typeLevelOrganization, settings.get<CSharpOrganizeSettings>("typeLevelOrganization"));
+
+        if (!doNotUseWorkspaceSettings && vscode.workspace.workspaceFolders) {
+            const workspaceSettings = CSharpenWorkspaceSettings.readFile(vscode.workspace.workspaceFolders[0].uri.fsPath);
+            if (workspaceSettings) CSharpenVSCodeExtensionSettings.overrideValues(settings, workspaceSettings);
+        }
     }
 }

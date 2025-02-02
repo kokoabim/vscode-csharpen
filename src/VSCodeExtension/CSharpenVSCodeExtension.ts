@@ -8,6 +8,7 @@ import { VSCodeExtension } from "./VSCodeExtension";
 import * as vscode from "vscode";
 import { CSharpProjectFile, CSharpProjectPackageReference } from "../CSharp/CSharpProjectFile";
 import { FileSystem } from "../Utils/FileSystem";
+import { CSharpenWorkspaceSettings } from "./CSharpenWorkspaceSettings";
 
 /**
  * CSharpen — C# File Organizer VS Code extension
@@ -22,11 +23,50 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             this.createRemoveUnusedReferencesCommand(),
             this.createRemoveUnusedUsingsCommand(),
             this.createSharpenFileCommand(),
-            this.createSharpenProjectFilesCommand());
+            this.createSharpenProjectFilesCommand(),
+            this.createCreateWorkspaceSettingsFileCommand());
     }
 
     static use(context: vscode.ExtensionContext): CSharpenVSCodeExtension {
         return new CSharpenVSCodeExtension(context);
+    }
+
+    private createCreateWorkspaceSettingsFileCommand(): VSCodeCommand {
+        return new VSCodeCommand("kokoabim.csharpen.create-workspace-settings-file", async () => {
+            if (!this.isWorkspaceReady()) return;
+
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (!workspaceFolder) return;
+
+            const workspaceSettingsFile = workspaceFolder + "/" + CSharpenWorkspaceSettings.fileName;
+
+            const response = await vscode.window.showInformationMessage('Create CSharpen workspace settings file?', {
+                modal: true,
+                detail: "This will create a .csharpen.json file in the workspace folder.",
+            }, "Yes, Current Settings", "Yes, Defaults", "Yes, Empty", "No");
+
+            if (!response || !response.startsWith("Yes")) return;
+
+            const shouldNotWriteFile = await FileSystem.existsAsync(workspaceSettingsFile).then(async exists => {
+                if (!exists) return false;
+
+                const answer = await vscode.window.showErrorMessage('The CSharpen workspace settings file already exists. Do you want to overwrite it?', {
+                    modal: true,
+                }, 'Yes', 'No');
+
+                return answer !== 'Yes';
+            });
+
+            if (shouldNotWriteFile) return;
+
+            const workSpaceSettings = response.includes("Empty")
+                ? {} as CSharpenWorkspaceSettings
+                : CSharpenVSCodeExtensionSettings.createWorkspaceSettingsFromExtensionSettings(response.includes("Defaults"));
+
+            await FileSystem.writeFileAsync(workspaceSettingsFile, workSpaceSettings, true, false);
+
+            await vscode.workspace.openTextDocument(workspaceSettingsFile).then(doc => vscode.window.showTextDocument(doc));
+        });
     }
 
     private createOutputFileDiagnosticsCommand(): VSCodeCommand {
@@ -79,13 +119,15 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                 const fileUris = workspaceFiles.filter(f => f.path.includes(project.directory + "/")).sort((a, b) => a.path.localeCompare(b.path));
                 if (fileUris.length === 0) continue;
 
-                this.outputLine(`\n[${project.name}: ${project.relativePath}] Opening and outputting file diagnostics for ${fileUris.length} C# files...`);
+                this.outputLine(`\n[Project: ${project.name}] Opening and outputting file diagnostics for ${fileUris.length} C# files...`);
 
                 for (const f of fileUris) {
                     const textDocument = await vscode.workspace.openTextDocument(f);
                     // eslint-disable-next-line @typescript-eslint/no-unused-vars
                     const textEditor = await vscode.window.showTextDocument(textDocument);
                 }
+
+                // TODO: add delay before detecting file diagnostics
 
                 const fileDiagnosticsForProjectFiles = fileUris.flatMap(f => CSharpFile.getFileDiagnosticsUsingUri(f));
                 if (fileDiagnosticsForProjectFiles.length === 0) continue;
@@ -115,179 +157,21 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                 projects = projects.filter(p => quickPicked.includes(p.relativePath));
             }
 
+            const settings = CSharpenVSCodeExtensionSettings.shared(true);
+
+            const thirdOperation = settings.sharpenFilesWhenRemovingUnusedReferences
+                ? ", and (3) sharpen all opened C# files"
+                : "";
+
             if ("Yes" !== (await vscode.window.showInformationMessage(
                 `Remove unused references in ${projects.length === 1 ? "project" : `${projects.length} projects`}?`,
                 {
                     modal: true,
-                    detail: `This will open and remove unused using directives of all C# files in ${projects.length === 1 ? `project ${projects[0].name}` : `${projects.length} projects`}.\n\nThis process can take a few minutes depending on the number of projects, files and references.\n\nModifications can be undone.`,
+                    detail: `This will (1) open all C# files in ${projects.length === 1 ? `project ${projects[0].name}` : `${projects.length} projects`} and remove unused using directives, and (2) remove package references one at a time and ensure the solution builds (if the build fails the package reference is re-added)${thirdOperation}.\n\nThis process can take a few minutes depending on the number of projects, files and references.\n\nIts process can be canceled and modifications can be undone.`,
                 },
                 "Yes", "No"))) return;
 
-            const settings = CSharpenVSCodeExtensionSettings.shared(true);
-
-            const workspaceFiles = await vscode.workspace.findFiles("**/*.cs");
-            let filesCount = 0;
-            let removedPackageReferencesCount = 0;
-            // TODO: see below TODO: let removedProjectReferencesCount = 0;
-            let removedUnusedUsingsCount = 0;
-
-            this.clearOutput();
-            this.showOutput();
-
-            for await (const project of projects) {
-                const fileUris = workspaceFiles.filter(f => f.path.includes(project.directory + "/")).sort((a, b) => a.path.localeCompare(b.path));
-                if (fileUris.length > 0) {
-                    filesCount += fileUris.length;
-
-                    this.output(`\n[${project.name}] Removing unused using directives for ${fileUris.length} C# files...`);
-
-                    for await (const fileUri of fileUris) {
-                        const textDocument = await vscode.workspace.openTextDocument(fileUri);
-                        await vscode.window.showTextDocument(textDocument);
-                    }
-
-                    this.outputLine(` done`);
-                }
-
-                if (fileUris.length > 0 || project.packageReferences.length > 0 || project.projectReferences.length > 0) {
-                    const didBuildSolution = await projects[0].buildSolutionAsync(this.outputChannel, " - ", false);
-                    if (!didBuildSolution) return;
-
-                    if (fileUris.length > 0) {
-                        this.output(` - Removing unused using directives...`);
-
-                        let removedCount = 0;
-
-                        for await (const fileUri of fileUris) {
-                            try {
-                                const textDocument = await vscode.workspace.openTextDocument(fileUri);
-                                const textEditor = await vscode.window.showTextDocument(textDocument);
-                                await new Promise(f => setTimeout(f, settings.delayBeforeRemovingUnusedUsingDirectives));
-                                removedCount += await CSharpFile.removeUnusedUsings(textEditor);
-                            }
-                            catch (e: any) {
-                                this.outputLine(" Error: " + e.message);
-                                return;
-                            }
-                        }
-
-                        removedUnusedUsingsCount += removedCount;
-
-                        if (removedCount > 0) this.outputLine(` removed ${removedCount}`);
-                        else this.outputLine(` none found`);
-                    }
-                }
-
-                if (project.packageReferences.length > 0) {
-                    const conditionalPackageReferenceRemovals: { conditionalReference: string, possibleRemoval: CSharpProjectPackageReference }[] = [];
-
-                    for await (const packageReference of project.packageReferences) {
-                        const doNotRemoveConfig = settings.doNotRemoveThesePackageReferences.find(d => packageReference.name === d || d.startsWith(packageReference.name + ";"));
-                        if (doNotRemoveConfig) {
-                            let continueAfter = true;
-
-                            if (!doNotRemoveConfig.includes(";")) {
-                                this.outputLine(`\n[${project.name}] Skipping ${packageReference.name} since it is configured not to be removed`);
-                            }
-                            else {
-                                const doNotRemoveConfigSplit = doNotRemoveConfig.split(";");
-                                if (doNotRemoveConfigSplit.length !== 2) {
-                                    this.outputLine(`\n[${project.name}] Skipping ${packageReference.name} since its configuration to skip is improper ‼️`);
-                                }
-                                else {
-                                    const conditionalReference = doNotRemoveConfigSplit[1];
-                                    if (project.packageReferences.find(pr => pr.name === conditionalReference) === undefined) {
-                                        continueAfter = false; // "conditionalReference" does not exist so try to remove "packageReference" now
-                                    }
-                                    else {
-                                        conditionalPackageReferenceRemovals.push({ conditionalReference: conditionalReference, possibleRemoval: packageReference });
-                                    }
-                                }
-                            }
-
-                            if (continueAfter) continue;
-                        }
-
-                        await project.removePackageReferenceAsync(this.outputChannel, packageReference);
-                    }
-
-                    if (conditionalPackageReferenceRemovals.length > 0) {
-                        const packageReferenceRemovals = conditionalPackageReferenceRemovals.filter(cpr => project.packageReferences.find(pr => pr.name === cpr.conditionalReference) === undefined).map(cpr => cpr.possibleRemoval);
-
-                        if (packageReferenceRemovals.length > 0) {
-                            for await (const packageReference of packageReferenceRemovals) {
-                                await project.removePackageReferenceAsync(this.outputChannel, packageReference);
-                            }
-                        }
-                    }
-
-                    if (project.removedPackageReferences.length > 0) {
-                        removedPackageReferencesCount += project.removedPackageReferences.length;
-
-                        this.outputLine(`\n[${project.name}] Removed ${project.removedPackageReferences.length} package references:`);
-                        project.removedPackageReferences.forEach(r => this.outputLine(` - ${r.name}`));
-                    }
-                }
-
-                // TODO: resolve issue with removing project references
-                /*if (project.projectReferences.length > 0) {
-                    for await (const projectReference of project.projectReferences) {
-                        await project.removeProjectReferenceAsync(this.outputChannel, projectReference);
-                    }
-
-                    if (project.removedProjectReferences.length > 0) {
-                        removedProjectReferencesCount += project.removedProjectReferences.length;
-
-                        this.outputLine(`\n[${project.name}] Removed ${project.removedProjectReferences.length} project references:`);
-                        project.removedProjectReferences.forEach(r => this.outputLine(` - ${r.name}`));
-                    }
-                }*/
-
-                if (project.removedPackageReferences.length > 0 || project.removedProjectReferences.length > 0) {
-                    if (fileUris.length > 0) {
-                        this.output(`\n[${project.name}] Repeating to remove unused using directives for ${fileUris.length} C# files...`);
-
-                        let removedCount = 0;
-
-                        for await (const fileUri of fileUris) {
-                            try {
-                                const textDocument = await vscode.workspace.openTextDocument(fileUri);
-                                const textEditor = await vscode.window.showTextDocument(textDocument);
-                                await new Promise(f => setTimeout(f, settings.delayBeforeRemovingUnusedUsingDirectives));
-                                removedCount += await CSharpFile.removeUnusedUsings(textEditor);
-                            }
-                            catch (e: any) {
-                                this.outputLine(" Error: " + e.message);
-                                return;
-                            }
-                        }
-
-                        removedUnusedUsingsCount += removedCount;
-
-                        if (removedCount > 0) this.outputLine(` removed ${removedCount}`);
-                        else this.outputLine(` none found`);
-                    }
-                }
-            }
-
-            if (projects.length > 1) {
-                if (removedPackageReferencesCount > 0) {
-                    this.outputLine(`\nRemoved ${removedPackageReferencesCount} package references from ${projects.length} projects:`);
-                    projects.filter(p => p.removedPackageReferences.length > 0).flatMap(p => ` - ${p.name} (${p.removedPackageReferences.length}):\n   - ${p.removedPackageReferences.flatMap(rp => rp.name).join("\n   - ")}`).forEach(p => this.outputLine(p));
-                }
-
-                // TODO: see above TODO
-                // if (removedProjectReferencesCount > 0) {
-                //     this.outputLine(`\nRemoved ${removedProjectReferencesCount} project references from ${projects.length} projects:`);
-                //     projects.flatMap(p => ` - ${p.name} (${p.removedProjectReferences.length}):\n   - ${p.removedProjectReferences.flatMap(rp => rp.name).join("\n   - ")}`).forEach(p => this.outputLine(p));
-                // }
-
-                if (removedUnusedUsingsCount > 0) {
-                    this.outputLine(`\nRemoved ${removedUnusedUsingsCount} unused using directives from ${filesCount} files`);
-                }
-            }
-
-            this.outputLine(`\nFinished removing unused using directives and unused package references 🏁`);
+            await this.removeUnusedReferences(projects, settings);
         });
     }
 
@@ -341,45 +225,9 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
             const documentText = textEditor.document.getText();
 
-            const [fileFilterStatus, fileFilterReason] = FileFilter.checkAll(vscode.workspace.asRelativePath(textEditor.document.uri), documentText, settings.fileFilters);
-            if (fileFilterStatus === FileFilterStatus.deny) {
-                this.warning(fileFilterReason!);
-                return;
-            }
-            else if (fileFilterStatus === FileFilterStatus.confirm) {
-                const result = await vscode.window.showWarningMessage(`${fileFilterReason} — Override and continue? (Changes can be undone)`, "Continue", "Cancel");
-                if (result !== "Continue") return;
-            }
-
-            if (settings.removeUnusedUsingsOnSharpen) await CSharpFile.removeUnusedUsings(textEditor);
-            if (settings.formatDocumentOnSharpen) await vscode.commands.executeCommand('editor.action.formatDocument', textEditor.document.uri);
-
-            let csharpFile;
-            try {
-                csharpFile = await CSharpFile.create(textEditor.document);
-                if (!csharpFile.hasChildren) {
-                    this.warning("No C# symbols found.");
-                    return;
-                }
-            }
-            catch (e: any) {
-                this.error(e.message);
-                return;
-            }
-
-            try {
-                CSharpOrganizer.organizeFile(settings, csharpFile);
-            }
-            catch (e: any) {
-                this.error(e.message);
-                return;
-            }
-
-            await textEditor.edit(tee => {
-                tee.replace(new vscode.Range(CSharpFile.zeroPosition, textEditor.document.positionAt(textEditor.document.getText().length)), csharpFile.text);
-            });
-
-            if (settings.formatDocumentOnSharpen) await vscode.commands.executeCommand('editor.action.formatDocument', textEditor.document.uri);
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const [sharpened, removedUnusedUsingsCount, didError, sharpenError] = await this.sharpenFile(settings, textEditor, documentText);
+            if (!sharpened || didError) return;
 
             let fileSizeDiffText = "";
             if (settings.showFileSizeDifferenceOnSharpen) {
@@ -499,6 +347,343 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             dsca.children.forEach(c => this.outputDocumentSymbolCodeActions(c, "  "));
             this.outputLine(`}`);
         }
+    }
+
+    private async removeUnusedReferences(projects: CSharpProjectFile[], settings: CSharpenVSCodeExtensionSettings): Promise<void> {
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `${settings.sharpenFilesWhenRemovingUnusedReferences ? "Sharpening files, removing" : "Removing"} unused using directives and ${settings.sharpenFilesWhenRemovingUnusedReferences ? "removing unused " : ""}package references`,
+            cancellable: true
+        }, async (process, token) => {
+            process.report({ message: "Finding C# files..." });
+
+            if (settings.sharpenFilesWhenRemovingUnusedReferences) settings.removeUnusedUsingsOnSharpen = true;
+
+            const workspaceFiles = await vscode.workspace.findFiles("**/*.cs");
+            const projectFiles: { [key: string]: vscode.Uri[] }[] = projects.map(p =>
+                ({ [p.filePath]: workspaceFiles.filter(f => f.path.includes(p.directory + "/")).sort((a, b) => a.path.localeCompare(b.path)) }));
+
+            const packageReferencesTotalCount = projects.flatMap(p => p.packageReferences).length;
+            const packageReferenceProcessedIncrementSize = packageReferencesTotalCount > 0 ? 100 / packageReferencesTotalCount : 0;
+
+            let projectFilesTotalCount = 0;
+            let removedPackageReferencesTotalCount = 0;
+            // TODO: see below TODO: let removedProjectReferencesTotalCount = 0;
+            let removedUnusedUsingsTotalCount = 0;
+            let abortingOrDidCancel = false;
+
+            this.clearOutput();
+            this.showOutput();
+
+            const reportProgress = (message: string, incrementPackageReferenceProcessed = false) => {
+                process.report({ message: message, increment: incrementPackageReferenceProcessed ? packageReferenceProcessedIncrementSize : undefined });
+            };
+
+            const askToContinueOnWarning = async (warningMessage: string) => {
+                const response = (await vscode.window.showWarningMessage(warningMessage, {}, "Continue", "Abort"));
+                if (response === "Continue") return true;
+                else {
+                    this.outputLine(`\nAborting 🚫`);
+                    abortingOrDidCancel = true;
+                    return false;
+                }
+            };
+
+            const isCancellationRequested = () => {
+                if (token.isCancellationRequested) {
+                    this.outputLine(`\nCancelled 🚫`);
+                    abortingOrDidCancel = true;
+                    return true;
+                }
+                else return false;
+            };
+
+            const processProjectFiles = async (projectFileUris: vscode.Uri[], removeUnusedUsings: boolean, sharpenFiles: boolean): Promise<[boolean, number]> => {
+                let removedUnusedUsingsFromAllFilesCount = 0;
+
+                for await (const fileUri of projectFileUris) {
+                    if (isCancellationRequested()) return [false, removedUnusedUsingsFromAllFilesCount];
+
+                    try {
+                        const textDocument = await vscode.workspace.openTextDocument(fileUri);
+                        const textEditor = await vscode.window.showTextDocument(textDocument);
+
+                        await new Promise(f => setTimeout(f, settings.delayBeforeRemovingUnusedUsingDirectives));
+
+                        let removedUnusedUsingsFromFileCount = 0;
+
+                        if (removeUnusedUsings && !sharpenFiles) {
+                            removedUnusedUsingsFromFileCount = await CSharpFile.removeUnusedUsings(textEditor);
+                        }
+                        else if (sharpenFiles) {
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                            const [sharpened, removedUnusedUsingsCount, didError, sharpenError] = await this.sharpenFile(settings, textEditor, textDocument.getText(), false);
+
+                            if (didError) {
+                                if (!await askToContinueOnWarning(`Sharpening failed. You may address the failure now then continue.\n\n${sharpenError}`)) {
+                                    return [false, removedUnusedUsingsFromAllFilesCount];
+                                }
+                            }
+
+                            removedUnusedUsingsFromFileCount = removedUnusedUsingsCount;
+                        }
+
+                        if (sharpenFiles || removedUnusedUsingsFromFileCount > 0) await textEditor.document.save();
+
+                        removedUnusedUsingsFromAllFilesCount += removedUnusedUsingsFromFileCount;
+                    }
+                    catch (e: any) {
+                        this.outputLine(" Error: " + e.message);
+
+                        if (!await askToContinueOnWarning(`${settings.sharpenFilesWhenRemovingUnusedReferences ? "Sharpening of file and removal" : "Removal"} of unused using directives failed. You may address the failure now then continue.`)) {
+                            return [false, removedUnusedUsingsFromAllFilesCount];
+                        }
+                    }
+                }
+
+                return [true, removedUnusedUsingsFromAllFilesCount];
+            };
+
+            for await (const project of projects) {
+                if (isCancellationRequested()) break; // project for-loop
+
+                reportProgress(`Processing ${project.name}...`);
+
+                const projectFileUris = projectFiles.find(pf => pf[project.filePath])?.[project.filePath] ?? [];
+                if (projectFileUris.length > 0) {
+                    projectFilesTotalCount += projectFileUris.length;
+
+                    this.output(`\n[Project: ${project.name}] ${settings.sharpenFilesWhenRemovingUnusedReferences ? "Sharpening files and removing" : "Removing"} unused using directives of ${projectFileUris.length} C# files...`);
+
+                    for await (const fileUri of projectFileUris) {
+                        if (isCancellationRequested()) break; // fileUri for-loop
+
+                        const textDocument = await vscode.workspace.openTextDocument(fileUri);
+                        await vscode.window.showTextDocument(textDocument);
+                    }
+
+                    if (abortingOrDidCancel) break; // project for-loop
+
+                    this.outputLine(` done`);
+                }
+
+                if (projectFileUris.length > 0 || project.packageReferences.length > 0) { // TODO: see below TODO: || project.projectReferences.length > 0) {
+                    const didBuildSolution = await projects[0].buildSolutionAsync(this.outputChannel, " - ", false);
+                    if (!didBuildSolution) {
+                        if (!await askToContinueOnWarning(`Solution build failed. You may address the failure now then continue.`)) break; // project for-loop
+                    }
+
+                    if (projectFileUris.length > 0) {
+                        this.output(` - ${settings.sharpenFilesWhenRemovingUnusedReferences ? "Sharpening files and removing" : "Removing"} unused using directives...`);
+
+                        const [shouldContinueOn, removedUnusedUsingsFromProjectFilesCount] = await processProjectFiles(projectFileUris, true, settings.sharpenFilesWhenRemovingUnusedReferences);
+
+                        removedUnusedUsingsTotalCount += removedUnusedUsingsFromProjectFilesCount;
+
+                        if (!shouldContinueOn) break; // project for-loop
+
+                        if (removedUnusedUsingsFromProjectFilesCount > 0) this.outputLine(` removed ${removedUnusedUsingsFromProjectFilesCount}`);
+                        else this.outputLine(` none found`);
+                    }
+                }
+
+                if (project.packageReferences.length > 0) {
+                    const conditionalPackageReferenceRemovals: { conditionalReference: string, possibleRemoval: CSharpProjectPackageReference }[] = [];
+
+                    for await (const packageReference of project.packageReferences) {
+                        if (isCancellationRequested()) break; // packageReference for-loop
+
+                        reportProgress(`Processing ${project.name}: ${packageReference.name}...`);
+
+                        const doNotRemoveConfig = settings.doNotRemoveThesePackageReferences.find(p => {
+                            const packageName = p.includes(";") ? p.split(";")[0] : p;
+                            return packageReference.name.match(`^${packageName}$`) !== null;
+                        });
+
+                        if (doNotRemoveConfig) {
+                            let skipThisPackageRemoval = true;
+
+                            if (!doNotRemoveConfig.includes(";")) {
+                                this.outputLine(`\n[Project: ${project.name}] Skipping ${packageReference.name} since it is configured not to be removed`);
+                            }
+                            else {
+                                const doNotRemoveConfigSplit = doNotRemoveConfig.split(";");
+                                if (doNotRemoveConfigSplit.length !== 2) {
+                                    this.outputLine(`\n[Project: ${project.name}] Skipping ${packageReference.name} since its configuration to skip is improper ‼️`);
+                                }
+                                else {
+                                    const possibleRemovalName = doNotRemoveConfigSplit[0];
+                                    const conditionalReferenceName = doNotRemoveConfigSplit[1];
+
+                                    const possiblePackagesToRemove = project.packageReferences.filter(pr => pr.name.match(`^${possibleRemovalName}$`) !== null);
+
+                                    if (possiblePackagesToRemove.length === 0) {
+                                        skipThisPackageRemoval = false; // "conditionalReference" does not exist so try to remove "packageReference" now
+                                    }
+                                    else {
+                                        possiblePackagesToRemove.forEach(pptr => {
+                                            if (!conditionalPackageReferenceRemovals.some(cprr => cprr.possibleRemoval.name === pptr.name)) {
+                                                conditionalPackageReferenceRemovals.push({ conditionalReference: conditionalReferenceName, possibleRemoval: pptr });
+                                            }
+                                        });
+                                    }
+                                }
+                            }
+
+                            if (skipThisPackageRemoval) continue; // packageReference for-loop
+                        }
+
+                        await project.removePackageReferenceAsync(this.outputChannel, packageReference);
+
+                        reportProgress(`Processing ${project.name}...`, true);
+                    }
+
+                    if (abortingOrDidCancel) break; // project for-loop
+
+                    if (conditionalPackageReferenceRemovals.length > 0) {
+                        const packageReferenceRemovals = conditionalPackageReferenceRemovals.filter(cprr => project.packageReferences.filter(pr => pr.name.match(`^${cprr.conditionalReference}$`) !== null).length === 0).map(cprr => cprr.possibleRemoval);
+
+                        if (packageReferenceRemovals.length > 0) {
+                            this.outputLine(`\n[Project: ${project.name}] Removing ${packageReferenceRemovals.length} conditional package references...`);
+
+                            for await (const packageReference of packageReferenceRemovals) {
+                                if (isCancellationRequested()) break; // packageReference for-loop
+
+                                await project.removePackageReferenceAsync(this.outputChannel, packageReference);
+                            }
+
+                            if (abortingOrDidCancel) break; // project for-loop
+                        }
+                    }
+
+                    if (project.removedPackageReferences.length > 0) {
+                        removedPackageReferencesTotalCount += project.removedPackageReferences.length;
+
+                        this.outputLine(`\n[Project: ${project.name}] Removed ${project.removedPackageReferences.length} package references:`);
+                        project.removedPackageReferences.forEach(r => this.outputLine(` - ${r.name}`));
+                    }
+                }
+
+                // TODO: resolve issue with removing project references
+                /*if (project.projectReferences.length > 0) {
+                    for await (const projectReference of project.projectReferences) {
+                        await project.removeProjectReferenceAsync(this.outputChannel, projectReference);
+                    }
+
+                    if (project.removedProjectReferences.length > 0) {
+                        removedProjectReferencesTotalCount += project.removedProjectReferences.length;
+
+                        this.outputLine(`\n[Project: ${project.name}] Removed ${project.removedProjectReferences.length} project references:`);
+                        project.removedProjectReferences.forEach(r => this.outputLine(` - ${r.name}`));
+                    }
+                }*/
+
+                if (project.removedPackageReferences.length > 0) { // TODO: see above TODO: || project.removedProjectReferences.length > 0) {
+                    if (projectFileUris.length > 0) {
+                        this.outputLine(`\n[Project: ${project.name}] Since package references were removed, repeating to ${settings.sharpenFilesWhenRemovingUnusedReferences ? "sharpen files and " : ""}remove unused using directives for ${projectFileUris.length} C# files...`);
+
+                        const didBuildSolution = await project.buildSolutionAsync(this.outputChannel, " - ", false);
+                        if (!didBuildSolution) {
+                            if (!await askToContinueOnWarning(`Solution build failed. You may address the failure now then continue.`)) break; // project for-loop
+                        }
+
+                        const [shouldContinueOn, removedUnusedUsingsFromProjectFilesCount] = await processProjectFiles(projectFileUris, true, settings.sharpenFilesWhenRemovingUnusedReferences);
+
+                        removedUnusedUsingsTotalCount += removedUnusedUsingsFromProjectFilesCount;
+
+                        if (!shouldContinueOn) break; // project for-loop
+
+                        if (removedUnusedUsingsFromProjectFilesCount > 0) this.outputLine(` - Removed ${removedUnusedUsingsFromProjectFilesCount} unused using directives`);
+                        else this.outputLine(` - None found`);
+                    }
+                }
+            }
+
+            reportProgress(`Finishing...`);
+
+            if (removedPackageReferencesTotalCount + removedUnusedUsingsTotalCount > 0) {
+                this.outputLine(`\n${"=".repeat(50)}`);
+
+                if (!abortingOrDidCancel) {
+                    this.outputLine("");
+
+                    const didBuildSolution = await projects[0].buildSolutionAsync(this.outputChannel, undefined, true);
+                    if (!didBuildSolution) {
+                        this.outputLine(`\nBuild failed but don't worry. This is most likely due to a used using directive that was removed. The VS Code API at times incorrectly indicates that a using directive is not used so thus it is removed. All files are still open and can be modified.`);
+                    }
+
+                    this.outputLine(`\n${"-".repeat(50)}`);
+                }
+
+                if (removedPackageReferencesTotalCount > 0) {
+                    this.outputLine(`\nRemoved ${removedPackageReferencesTotalCount} package references throughout ${projects.length} projects:`);
+                    projects.filter(p => p.removedPackageReferences.length > 0).flatMap(p => ` - ${p.name} (${p.removedPackageReferences.length}):\n   - ${p.removedPackageReferences.flatMap(rp => rp.name).join("\n   - ")}`).forEach(p => this.outputLine(p));
+                }
+
+                // TODO: see above TODO
+                // if (removedProjectReferencesTotalCount > 0) {
+                //     this.outputLine(`\nRemoved ${removedProjectReferencesTotalCount} project references from ${projects.length} projects:`);
+                //     projects.flatMap(p => ` - ${p.name} (${p.removedProjectReferences.length}):\n   - ${p.removedProjectReferences.flatMap(rp => rp.name).join("\n   - ")}`).forEach(p => this.outputLine(p));
+                // }
+
+                if (removedUnusedUsingsTotalCount > 0) {
+                    this.outputLine(`\n${"-".repeat(50)}`);
+                    this.outputLine(`\nRemoved ${removedUnusedUsingsTotalCount} unused using directives throughout ${projectFilesTotalCount} files`);
+                }
+
+                this.outputLine(`\n${"=".repeat(50)}`);
+            }
+
+            this.outputLine(`\n🏁 Finished ${settings.sharpenFilesWhenRemovingUnusedReferences ? "sharpening files and" : ""}removing unused using directives and ${settings.sharpenFilesWhenRemovingUnusedReferences ? "removing unused " : ""}package references 🏁`);
+
+            if (!settings.sharpenFilesWhenRemovingUnusedReferences) {
+                this.outputLine(`\n💡 Tip: Set extension setting 'csharpen.sharpenFilesWhenRemovingUnusedReferences' to 'true' to sharpen all opened C# files during this process`);
+            }
+        });
+    }
+
+    private async sharpenFile(settings: CSharpenVSCodeExtensionSettings, textEditor: vscode.TextEditor, documentText: string, showMessages = true): Promise<[sharpened: boolean, removedUnusedUsingsCount: number, didError: boolean, sharpenError: string | undefined]> {
+        const [fileFilterStatus, fileFilterReason] = FileFilter.checkAll(vscode.workspace.asRelativePath(textEditor.document.uri), documentText, settings.fileFilters);
+        if (fileFilterStatus === FileFilterStatus.deny) {
+            if (showMessages) this.warning(fileFilterReason!);
+            return [false, 0, false, fileFilterReason];
+        }
+        else if (fileFilterStatus === FileFilterStatus.confirm) {
+            const result = await vscode.window.showWarningMessage(`${fileFilterReason} — Override and continue? (Changes can be undone)`, "Continue", "Cancel");
+            if (result !== "Continue") return [false, 0, false, `Canceled: ${fileFilterReason}`];
+        }
+
+        const removedUnusedUsingsCount = settings.removeUnusedUsingsOnSharpen ? await CSharpFile.removeUnusedUsings(textEditor) : 0;
+        if (settings.formatDocumentOnSharpen) await vscode.commands.executeCommand('editor.action.formatDocument', textEditor.document.uri);
+
+        let csharpFile;
+        try {
+            csharpFile = await CSharpFile.create(textEditor.document);
+            if (!csharpFile.hasChildren) {
+                if (showMessages) this.warning("No C# symbols found.");
+                return [false, removedUnusedUsingsCount, false, "No C# symbols found"];
+            }
+        }
+        catch (e: any) {
+            if (showMessages) this.error(e.message);
+            return [false, removedUnusedUsingsCount, true, `Error: ${e.message}`];
+        }
+
+        try {
+            CSharpOrganizer.organizeFile(settings, csharpFile);
+        }
+        catch (e: any) {
+            if (showMessages) this.error(e.message);
+            return [false, removedUnusedUsingsCount, true, `Error: ${e.message}`];
+        }
+
+        await textEditor.edit(tee => {
+            tee.replace(new vscode.Range(CSharpFile.zeroPosition, textEditor.document.positionAt(textEditor.document.getText().length)), csharpFile.text);
+        });
+
+        if (settings.formatDocumentOnSharpen) await vscode.commands.executeCommand('editor.action.formatDocument', textEditor.document.uri);
+
+        return [true, removedUnusedUsingsCount, false, undefined];
     }
 }
 

@@ -1,57 +1,87 @@
-# Features
+# _Sharpen_ C# Files
 
-## _Sharpen_ C# Files
+_Sharpen_ C# files by ordering, sorting and regionalizing symbols (directives, declarations, types and members) by access level, name and type.
 
-_Sharpen_ (or organize) C# files by ordering, sorting and regionalizing symbols (i.e. directives, declarations, types and members) by access level, name and type.
+Keyboard shortcut:
+
+-   Current file: **⇧**+**⌥**+**⌘**+**f** on macOS, **shift**+**alt**+**ctrl**+**f** on Windows/Linux
+-   Tip: Think Format Document command, which is **⇧**+**⌥**+**f** on macOS or **shift**+**alt**+**f** on Windows/Linux, but add **⌘** on macOS or **ctrl** on Windows/Linux.
 
 Commands:
-- Current file: "Sharpen Document" (`kokoabim.csharpen.sharpen-file`)
-- Project files: "Sharpen All Files In Project..." (`kokoabim.csharpen.sharpen-project-files`)
 
-## Remove Unused Package References (NuGet)
+-   Current file: "Sharpen Document" (`kokoabim.csharpen.sharpen-file`)
+-   Project files: "Sharpen All Files In Project..." (`kokoabim.csharpen.sharpen-project-files`)
 
-<p style="text-align:center;"><span style="font-size:1.25em;font-weight:bold;">IN PREVIEW</span><br/>Experimental (Though Can Be Undone)</p>
+# Remove Unused Package References
 
-Remove unused package references (NuGet) from one or more projects. This also removes unused `using` directives.
+### IN PREVIEW — Experimental, Though Can Be Undone
+
+Remove unused package references (NuGet) from one or more projects. For all C# files of the projects being processed, unused `using` directives will be removed and, if enabled, the file will be _sharpened_ (setting: `csharpen.sharpenFilesWhenRemovingUnusedReferences`).
 
 Command: "Remove Unused References Of Project..." (`kokoabim.csharpen.remove-unused-references`)
 
-## Remove Unused Using Directives
+### Known Issue
 
-Remove unused `using` directives (either when _sharpening_ a file or using a standalone command).
+It is possible that _used_ `using` directives are removed. This is due to VS Code incorrectly indicating that a `using` directive is not used (by way of its `vscode.languages.getDiagnostics(Uri):Diagnostic[]` API). The setting `csharpen.delayBeforeRemovingUnusedUsingDirectives` adds a delay after showing the file in the editor which may help with this issue though adds time to the overall process.
 
-Command: "Remove Unused Using Declarations" (`kokoabim.csharpen.remove-unused-usings`)
+Note: If this occurs, use the Quick Fix to re-edd the `using` directive. (**⌘**+**.** on macOS or **ctrl**+**.** on Windows/Linux)
 
-## Regionalize by Access Modifier and Type
+# Remove Unused Using Directives
+
+Remove unused `using` directives (either when _sharpening_ a file, removing unused package references or using a standalone command).
+
+Stand-alone command: "Remove Unused Using Declarations" (`kokoabim.csharpen.remove-unused-usings`)
+
+# Regionalize by Access Modifier and Type
 
 Regionalize symbols by access modifier and/or type (on _sharpen_). Customizable in settings.
 
-## Regionalize Interface Implementations
+# Regionalize Interface Implementations
 
 Regionalize interface implementations by grouping them together within regions (on _sharpen_).
 
-Supported interface implementations: `IAsyncDisposable`, `ICloneable`, `ICollection`, `ICollection<T>`, `IComparable`, `IComparable<T>`, `IConvertible`, `IDisposable`, `IEnumerable`, `IEnumerable<T>`, `IEqualityComparer<T>`, `IEquatable<T>`, `IFormattable`, `IList`, `IList<T>`
+Supported interface implementations:
 
-Interface implementations grouped by the interface name (less generic type argument list) because of the implementation size: `IAsyncDisposable`, `IDisposable`, `ICollection`, `ICollection<T>`, `IConvertible`, `IList`, `IList<T>`
+-   `IAsyncDisposable`, `IDisposable`
+-   `ICloneable`
+-   `ICollection`, `ICollection<T>`
+-   `IComparable`, `IComparable<T>`
+-   `IConvertible`
+-   `IEnumerable`, `IEnumerable<T>`
+-   `IEqualityComparer<T>`
+-   `IEquatable<T>`
+-   `IFormattable`
+-   `IList`, `IList<T>`
 
-Interface implementations grouped in a shared `interfaces` region: `ICloneable`, `IComparable`, `IComparable<T>`, `IEnumerable`, `IEnumerable<T>`, `IEqualityComparer<T>`, `IEquatable<T>`, `IFormattable`
+Interface implementations grouped by the interface name (without generic type argument list) because of the implementation size:
+
+-   `IAsyncDisposable`, `IDisposable`
+-   `ICollection`, `ICollection<T>`
+-   `IConvertible`
+-   `IList`, `IList<T>`
+
+Interface implementations grouped in a shared `interfaces` region:
+
+-   `ICloneable`
+-   `IComparable`, `IComparable<T>`
+-   `IEnumerable`, `IEnumerable<T>`
+-   `IEqualityComparer<T>`,
+-   `IEquatable<T>`
+-   `IFormattable`
 
 Notes:
 
 -   [Explicit interface implementations](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/interfaces/explicit-interface-implementation) _are_ detected and supported.
 -   With `IDisposable` and `IAsyncDisposable` the finalizer (i.e. destructor) and possible `/^_?(is)?disposed$/i` (RegExp pattern) boolean instance field are also moved to the region.
 
-## Output File Diagnostics
+# Output File Diagnostics
 
-Output file diagnostics to an output panel. This includes language-specific diagnostics (e.g. syntax, semantic, compiler error/warning).
+Output file diagnostics to an output panel. This includes language-specific diagnostics (e.g. syntax, semantic, compiler error/warning) and, when outputting for a single file, it includes the Quick Fixes.
 
-(Note: This output was used while writing this extension and I decided to keep it in as it may be useful to others.)
+Commands:
 
-# Keyboard Shortcut
-
-_Sharpen_ (organize) current C# file: **⇧**+**⌥**+**⌘**+**f** (macOS) or **shift**+**alt**+**ctrl**+**f** (Windows/Linux)
-
-(Tip: Think **⇧**+**⌥**+**f** (macOS) or **shift**+**alt**+**f** (Windows/Linux) which is for Format Document but with an extra **⌘** (macOS) or **ctrl** (Windows/Linux) for _Sharpen_.)
+-   Current file: "Output File Diagnostics" (`kokoabim.csharpen.output-file-diagnostics`)
+-   Project files: "Output File Diagnostics For All Files In Project..." (`kokoabim.csharpen.output-file-diagnostics-for-project-files`)
 
 # Requirements
 
@@ -64,9 +94,11 @@ The following symbols are specially handled. They are not supported in the setti
 -   `using` directives:
     -   sorted alphabetically
     -   placed at top
+    -   unused `using` directives are removed (setting `csharpen.removeUnusedUsingsOnSharpen`)
 -   `namespace` declarations:
     -   sorted alphabetically
     -   placed after `using` directives
+    -   if one exists, converted to a file-scoped namespace (setting `csharpen.enforceFileScopedNamespaces`)
 
 # Known Issues / Limitations
 
@@ -76,7 +108,7 @@ A `Program.cs` file must contain a `Program` class with a static `Main` method. 
 
 ## Undo/Redo
 
-Undo/redo _is_ supported but because a format-document command is performed prior-to and after organizing a file, an undo/redo may need to be repeated for each operation. Annoying, I know. 😒 This should be addressed in a subsequent release.
+Undo/redo _is_ supported but because a Format Document command is performed prior-to and after organizing a file, an undo/redo may need to be repeated for each operation. Annoying, I know. 😒
 
 ## Preprocessor Directives
 
@@ -84,12 +116,12 @@ First off, within methods, property bodies and enums, preprocessor directives ar
 
 But... on the namespace level and within types (i.e. wrapped around members), there are considerations to be aware of.
 
-1. `#pragma` directives before and after a type or member _**should**_ be preserved.
-2. `#if` and `#endif` directives before and after a type or member _**should**_ be preserved.
+1. `#pragma` directives before and after a single type or member _**should**_ be preserved.
+2. `#if` and `#endif` directives before and after a single type or member _**should**_ be preserved.
 3. `#region` and `#endregion` directives are _**not**_ preserved. These are entirely stripped out.
 4. Default file filters are provided to detect and ignore files with `#else` and `#elif` directives. If a file is _sharpened_ with these directives outside of methods, property bodies and enums, there are unexpected results. Though, if the directives exist within methods, property bodies and enums, it should be ok. The default file filters have `confirmOnDeny` set to `true` to provide ability to conveniently continue _sharpening_ when detected and you _**know**_ what you're doing.
 
-Lastly, all _sharpening_ modifications can always be undone. If you run into issues, please report them to improve the extension. Better support for preprocessor directives is planned for subsequent releases.
+Note: All _sharpening_ modifications can always be undone.
 
 # In-Depth Language Specification
 

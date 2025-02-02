@@ -14,6 +14,7 @@ export class CSharpProjectFile {
     projectReferences: CSharpProjectProjectReference[] = [];
     removedPackageReferences: CSharpProjectPackageReference[] = [];
     removedProjectReferences: CSharpProjectProjectReference[] = [];
+    solutionFilePath: string | undefined;
     targetFramework: string | undefined;
     workspaceFolder: string | undefined;
 
@@ -48,7 +49,7 @@ export class CSharpProjectFile {
     }
 
     async buildAsync(outputChannel: vscode.OutputChannel, prefix = "", showFilePath = true): Promise<boolean> {
-        outputChannel.append(`${prefix}${showFilePath ? `[${this.relativePath}] ` : ""}Building project...`);
+        outputChannel.append(`${prefix}${showFilePath ? `[Project: ${this.name}] ` : ""}Building project...`);
 
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const [dotNetBuildExitCode, dotNetBuildOutput] = await Executor.execToString(`dotnet build -v m "${this.filePath}"`, this.directory);
@@ -63,25 +64,15 @@ export class CSharpProjectFile {
     }
 
     async buildSolutionAsync(outputChannel: vscode.OutputChannel, prefix = "", showFilePath = true): Promise<boolean> {
-        if (!this.workspaceFolder) {
-            outputChannel.appendLine(`${prefix}No workspace folder`);
-            return false;
-        }
-
-        const solutionFiles = await glob(this.workspaceFolder + '/*.sln');
-        if (solutionFiles.length === 0) {
+        if (!this.solutionFilePath) {
             outputChannel.appendLine(`${prefix}No solution file found`);
             return false;
         }
-        else if (solutionFiles.length > 1) {
-            outputChannel.appendLine(`${prefix}Multiple solution files found`);
-            return false;
-        }
 
-        outputChannel.append(`${prefix}${showFilePath ? `[${basename(solutionFiles[0])}] ` : ""}Building solution...`);
+        outputChannel.append(`${prefix}${showFilePath ? `[Solution: ${basename(this.solutionFilePath, ".sln")}] ` : ""}Building solution...`);
 
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const [dotNetBuildExitCode, dotNetBuildOutput] = await Executor.execToString(`dotnet build -v m "${solutionFiles[0]}"`, this.workspaceFolder);
+        const [dotNetBuildExitCode, dotNetBuildOutput] = await Executor.execToString(`dotnet build -v m "${this.solutionFilePath}"`, this.workspaceFolder!);
         if (dotNetBuildExitCode === 0) {
             outputChannel.appendLine(` succeeded`);
             return true;
@@ -90,6 +81,20 @@ export class CSharpProjectFile {
             outputChannel.appendLine(` failed ❌`);
             return false;
         }
+    }
+
+    private async getSolutionFilePath(): Promise<string | undefined> {
+        if (!this.workspaceFolder) return undefined;
+
+        const solutionFilePaths = await glob(this.workspaceFolder + '/*.sln');
+        if (solutionFilePaths.length === 0) return undefined;
+
+        for await (const solutionFilePath of solutionFilePaths) {
+            const solutionContents = await CSharpProjectFile.readFileAsStringAsync(solutionFilePath);
+            if (solutionContents.includes("\"" + this.relativePath.replace(/\//g, "\\") + "\"")) return solutionFilePath;
+        }
+
+        return undefined;
     }
 
     async getCSharpFileUris(): Promise<vscode.Uri[]> {
@@ -111,7 +116,7 @@ export class CSharpProjectFile {
     }
 
     async removePackageReferenceAsync(outputChannel: vscode.OutputChannel, reference: CSharpProjectPackageReference): Promise<boolean> {
-        outputChannel.append(`\n[${this.name}: ${reference.name}] Removing package reference...`);
+        outputChannel.append(`\n[Project: ${this.name}, Package: ${reference.name}] Removing package reference...`);
 
         if (this.packageReferences.find(r => r.name === reference.name) === undefined) {
             outputChannel.appendLine(" not found");
@@ -128,8 +133,8 @@ export class CSharpProjectFile {
             outputChannel.appendLine(" succeeded");
         }
 
-        const didBuild = await this.buildSolutionAsync(outputChannel, " - ", false);
-        if (didBuild) {
+        const didBuildSolution = await this.buildSolutionAsync(outputChannel, " - ", false);
+        if (didBuildSolution) {
             outputChannel.appendLine(" - Package reference removed ✅");
 
             this.packageReferences = this.packageReferences.filter(r => r.name !== reference.name);
@@ -150,7 +155,7 @@ export class CSharpProjectFile {
 
     // TODO: resolve issue with removing project references
     /*async removeProjectReferenceAsync(outputChannel: vscode.OutputChannel, reference: CSharpProjectProjectReference): Promise<boolean> {
-        outputChannel.append(`\n[${this.name}: ${reference.name}] Removing project reference...`);
+        outputChannel.append(`\n[Project: ${this.name}, Project: ${reference.name}] Removing project reference...`);
 
         if (this.projectReferences.find(r => r.path === reference.path) === undefined) {
             outputChannel.appendLine(" not found");
@@ -205,6 +210,8 @@ export class CSharpProjectFile {
         });
 
         this.assemblyName = this.name;
+
+        this.solutionFilePath = await this.getSolutionFilePath();
 
         if (this.fileContents) {
             const assemblyName = this.getProperty("AssemblyName");
