@@ -1,5 +1,9 @@
 ## β Beta
 
+#### 2025-02-02 — 0.4.1
+
+-   Minor improvements and fixes to parsing symbols, mostly relating to primary constructors.
+
 #### 2025-02-01 — 0.4.0
 
 -   **IN PREVIEW:** Feature to remove unused packages references (NuGet) of one or more projects in a solution. This also removes unused `using` directives and, now with this version, ability to _sharpen_ files.

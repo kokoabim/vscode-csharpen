@@ -1,7 +1,7 @@
 {
     "name": "csharpen",
     "publisher": "spencerjames",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "description": "Sharpen (organize) C# files by ordering, sorting and regionalizing symbols.",
     "displayName": "CSharpen — C# File Organizer",
     "shortName": "CSharpen",

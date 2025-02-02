@@ -1,19 +1,21 @@
+import util from "node:util";
+import * as vscode from "vscode";
+
 import "../Extensions/Array.extensions";
-import { CSharpSymbol } from './CSharpSymbol';
-import { CSharpSymbolType } from './CSharpSymbolType';
+
 import { FileDiagnostic, FileDiagnosticIdentifier } from "../Models/FileDiagnostic";
-import { FileSystem } from '../Utils/FileSystem';
-import * as vscode from 'vscode';
-import util from 'node:util';
+import { FileSystem } from "../Utils/FileSystem";
+import { CSharpSymbol } from "./CSharpSymbol";
+import { CSharpSymbolType } from "./CSharpSymbolType";
 
 export class CSharpFile {
     static readonly zeroPosition = new vscode.Position(0, 0);
 
     readonly filePath: string;
-    readonly name: string;
-    readonly namespace = undefined;
-    readonly parent = undefined;
-    readonly type = CSharpSymbolType.file;
+    public readonly name: string;
+    public readonly namespace = undefined;
+    public readonly parent = undefined;
+    public readonly type = CSharpSymbolType.file;
 
     children: CSharpSymbol[] = [];
 
@@ -79,7 +81,7 @@ export class CSharpFile {
         const documentSymbols = await vscode.commands.executeCommand("vscode.executeDocumentSymbolProvider", textDocument.uri).then(symbols => symbols as vscode.DocumentSymbol[] || []);
         if (documentSymbols.length === 0) return [];
 
-        const symbols = CSharpSymbol.createSymbols(textDocument, documentSymbols);
+        const symbols = CSharpSymbol.createSymbols(textDocument, documentSymbols.sort((a, b) => a.range.start.compareTo(b.range.start)));
         const usingAndNamespaceSymbols = CSharpSymbol.createUsingAndNamespaceSymbols(textDocument, symbols);
 
         CSharpSymbol.addUsingAndNamespaceSymbols(usingAndNamespaceSymbols, symbols);
