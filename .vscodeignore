@@ -5,10 +5,13 @@
 *.sh
 .eslintrc.json
 .gitignore
+.vscode-test.mjs
+.vscode-test/
 .vscode/
 .vscodeignore
 dist/test/
 docs/
+eslint.config.mjs
 media/
 releases/
 src/

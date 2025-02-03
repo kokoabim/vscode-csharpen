@@ -1,4 +1,5 @@
 declare global {
+    // eslint-disable-next-line no-unused-vars
     interface Array<T> {
         anyMatches(regexp: string | RegExp): boolean;
         count(predicate: (item: T) => boolean): number;

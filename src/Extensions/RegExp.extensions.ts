@@ -1,4 +1,5 @@
 declare global {
+    // eslint-disable-next-line no-unused-vars
     interface RegExp {
         matches(input: string): RegExpExecArray[];
         matchGroupValues(input: string, groupName: string): string[];

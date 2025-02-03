@@ -21,7 +21,7 @@ export class CSharpenWorkspaceSettings {
     typeLevelOrganization: CSharpOrganizeSettings | undefined;
 
     static readFile(workspaceFolder: string): CSharpenWorkspaceSettings | undefined {
-        const filePath = workspaceFolder + "/" + this.fileName
+        const filePath = workspaceFolder + "/" + this.fileName;
 
         try { fsSync.accessSync(filePath, fsSync.constants.R_OK); }
         catch { return undefined; }

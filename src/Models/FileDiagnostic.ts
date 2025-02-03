@@ -43,13 +43,11 @@ export class FileDiagnostic {
     }
 }
 
-/* eslint-enable @typescript-eslint/naming-convention */
 export class FileDiagnosticIdentifier {
     static readonly useGeneratedRegexAttributeToGenerateRegExpAtCompileTime = "SYSLIB1045";
     static readonly usingDirectiveUnnecessary = "IDE0005";
 }
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export enum FileDiagnosticSeverity {
     Error = 0,
     Warning = 1,

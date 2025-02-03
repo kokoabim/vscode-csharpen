@@ -123,7 +123,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
                 for (const f of fileUris) {
                     const textDocument = await vscode.workspace.openTextDocument(f);
-                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                    // eslint-disable-next-line no-unused-vars
                     const textEditor = await vscode.window.showTextDocument(textDocument);
                 }
 
@@ -225,7 +225,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
             const documentText = textEditor.document.getText();
 
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            // eslint-disable-next-line no-unused-vars
             const [sharpened, removedUnusedUsingsCount, didError, sharpenError] = await this.sharpenFile(settings, textEditor, documentText);
             if (!sharpened || didError) return;
 
@@ -280,7 +280,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
                 for await (const fileUri of fileUris) {
                     const textDocument = await vscode.workspace.openTextDocument(fileUri);
-                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                    // eslint-disable-next-line no-unused-vars
                     const textEditor = await vscode.window.showTextDocument(textDocument);
                     await vscode.commands.executeCommand("kokoabim.csharpen.sharpen-file");
                 }
@@ -416,7 +416,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                             removedUnusedUsingsFromFileCount = await CSharpFile.removeUnusedUsings(textEditor);
                         }
                         else if (sharpenFiles) {
-                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                            // eslint-disable-next-line no-unused-vars
                             const [sharpened, removedUnusedUsingsCount, didError, sharpenError] = await this.sharpenFile(settings, textEditor, textDocument.getText(), false);
 
                             if (didError) {
