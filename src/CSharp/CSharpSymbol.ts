@@ -707,7 +707,11 @@ export class CSharpSymbol {
     }
 
     private static parseAttributesAndModifiers(symbol: CSharpSymbol, text: string): number {
-        const attributesAndModifiersMatch = text.match(`^${CSharpPatterns.attributes}${CSharpPatterns.modifiers}`);
+        const nameOffsetInBody = symbol.textDocument!.offsetAt(symbol.documentSymbol.selectionRange.start) - symbol.textDocument!.offsetAt(symbol.documentSymbol.range.start);
+
+        CSharpPatterns.attributesAndModifiersRegExp.lastIndex = 0;
+        const attributesAndModifiersMatch = CSharpPatterns.attributesAndModifiersRegExp.exec(text.substring(0, nameOffsetInBody));
+
         if (!attributesAndModifiersMatch) return 0;
 
         let signatureIndex = 0;
