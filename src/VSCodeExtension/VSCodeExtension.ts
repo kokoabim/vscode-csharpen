@@ -26,8 +26,8 @@ export abstract class VSCodeExtension {
         this.outputChannel.clear();
     }
 
-    protected async error(message: string): Promise<void> {
-        await vscode.window.showErrorMessage(`${this.shortName}: ${message}`);
+    protected async error(message: string, noPrefix = false): Promise<void> {
+        await vscode.window.showErrorMessage(`${noPrefix ? "" : `${this.shortName}: `}${message}`);
     }
 
     protected async getTextDocument(trySelectedIfNotActive = true, showWarningMessage = true): Promise<vscode.TextDocument | undefined> {
@@ -59,8 +59,8 @@ export abstract class VSCodeExtension {
         return textEditor;
     }
 
-    protected async information(message: string): Promise<void> {
-        await vscode.window.showInformationMessage(`${this.shortName}: ${message}`);
+    protected async information(message: string, noPrefix = false): Promise<void> {
+        await vscode.window.showInformationMessage(`${noPrefix ? "" : `${this.shortName}: `}${message}`);
     }
 
     protected async isWorkspaceReady(showWarningMessage = true): Promise<boolean> {
@@ -92,7 +92,7 @@ export abstract class VSCodeExtension {
         this.outputChannel.show(preserveFocus);
     }
 
-    protected async warning(message: string): Promise<void> {
-        await vscode.window.showWarningMessage(`${this.shortName}: ${message}`);
+    protected async warning(message: string, noPrefix = false): Promise<void> {
+        await vscode.window.showWarningMessage(`${noPrefix ? "" : `${this.shortName}: `}${message}`);
     }
 }

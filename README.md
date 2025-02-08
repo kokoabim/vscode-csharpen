@@ -32,13 +32,21 @@ Remove unused `using` directives (either when _sharpening_ a file, removing unus
 
 Stand-alone command: "Remove Unused Using Declarations" (`kokoabim.csharpen.remove-unused-usings`)
 
+# Symbol Renaming
+
+Based on configurable logic and patterns, symbols can be renamed on _sharpen_. The renaming operation uses VS Code's built-in rename functionality thus all references in other files are renamed as well.
+
+An example use case (and a default setting): All methods that (1) include a member modifier of `async`, (2) have a return type of `Task` or `ValueTask` (with or without generic type arguments) and (3) the symbol name does _not_ end with `Async` are renamed to _have_ a suffix of `Async`.
+
+See settings: `csharpen.symbolRenamingEnabled` and `csharpen.symbolRenaming`.
+
 # Regionalize by Access Modifier and Type
 
-Regionalize symbols by access modifier and/or type (on _sharpen_). Customizable in settings.
+Regionalize symbols by access modifier and/or type on _sharpen_. Customizable in settings.
 
 # Regionalize Interface Implementations
 
-Regionalize interface implementations by grouping them together within regions (on _sharpen_).
+Regionalize interface implementations by grouping them together within regions on _sharpen_.
 
 Supported interface implementations:
 

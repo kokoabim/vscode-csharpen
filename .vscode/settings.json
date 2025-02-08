@@ -10,9 +10,12 @@
         "Toste",
         "cctor",
         "copyfiles",
+        "cprr",
         "elif",
         "nint",
         "nuint",
+        "pptr",
+        "recordclass",
         "rogram"
     ],
     "cSpell.words": [
@@ -20,6 +23,7 @@
         "csharpen",
         "dsca",
         "Formattable",
+        "recordstruct",
         "Regionalizable",
         "regionalization",
         "regionalize",

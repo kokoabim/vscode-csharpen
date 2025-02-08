@@ -60,6 +60,29 @@ export namespace CSharpSymbolType {
         }
     }
 
+    export function fromString(type: string): CSharpSymbolType {
+        switch (type.toLocaleLowerCase()) {
+            case "class": return CSharpSymbolType.class;
+            case "constant": return CSharpSymbolType.constant;
+            case "delegate": return CSharpSymbolType.delegate;
+            case "enum": return CSharpSymbolType.enum;
+            case "event": return CSharpSymbolType.event;
+            case "field": return CSharpSymbolType.field;
+            case "interface": return CSharpSymbolType.interface;
+            case "method": return CSharpSymbolType.method;
+            case "property": return CSharpSymbolType.property;
+            case "recordclass": return CSharpSymbolType.recordClass;
+            case "recordstruct": return CSharpSymbolType.recordStruct;
+            case "struct": return CSharpSymbolType.struct;
+
+            default: return CSharpSymbolType.none;
+        }
+    }
+
+    export function fromDelimitedString(types: string, delimiter = ","): CSharpSymbolType[] {
+        return types.split(delimiter).map(t => fromString(t)).filter(t => t !== CSharpSymbolType.none);
+    }
+
     export function toPluralString(symbolType: CSharpSymbolType): string {
         switch (symbolType) {
             case CSharpSymbolType.using: return "usings";

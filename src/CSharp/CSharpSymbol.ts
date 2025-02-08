@@ -22,7 +22,6 @@ export class CSharpSymbol {
     private footer = "";
     private fullName!: string;
     private header = "";
-    private nameEndPosition?: vscode.Position;
     private position?: vscode.Position;
     private range?: vscode.Range;
     private textDocument?: vscode.TextDocument;
@@ -30,15 +29,16 @@ export class CSharpSymbol {
     readonly data: { [key: string]: any } = {};
 
     accessModifier = CSharpAccessModifier.none;
-    public children: CSharpSymbol[] = [];
-    public implements: string[] = [];
-    public memberModifiers = CSharpMemberModifiers.none;
-    public name!: string;
-    public namespace?: string;
-    public parent?: CSharpSymbol;
-    public regions: { start: string | undefined, end: string | undefined, groups: RegionGroup[] } = { start: undefined, end: undefined, groups: [] };
-    public returnType?: string | undefined;
-    public type = CSharpSymbolType.none;
+    children: CSharpSymbol[] = [];
+    implements: string[] = [];
+    memberModifiers = CSharpMemberModifiers.none;
+    name!: string;
+    nameRange?: vscode.Range;
+    namespace?: string;
+    parent?: CSharpSymbol;
+    regions: { start: string | undefined, end: string | undefined, groups: RegionGroup[] } = { start: undefined, end: undefined, groups: [] };
+    returnType?: string | undefined;
+    type = CSharpSymbolType.none;
 
     private constructor() { }
 
@@ -85,12 +85,14 @@ export class CSharpSymbol {
         CSharpSymbol.orderByPosition(symbols);
     }
 
-    static create(textDocument: vscode.TextDocument, documentSymbol: vscode.DocumentSymbol, parent?: CSharpSymbol): CSharpSymbol {
+    static create(textDocument: vscode.TextDocument, documentSymbol: vscode.DocumentSymbol, parent?: CSharpSymbol): CSharpSymbol | undefined {
+        if (CSharpSymbol.isEventMethod(documentSymbol)) return undefined;
+
         const symbol = new CSharpSymbol();
         symbol.documentSymbol = documentSymbol;
         symbol.fullName = documentSymbol.detail; // FQDN-class name; method name (not FQDN) and parameters; property name
         symbol.name = documentSymbol.name;
-        symbol.nameEndPosition = documentSymbol.selectionRange.end;
+        symbol.nameRange = documentSymbol.selectionRange;
         symbol.parent = parent;
         symbol.position = documentSymbol.range.start;
         symbol.textDocument = textDocument;
@@ -103,24 +105,21 @@ export class CSharpSymbol {
         CSharpSymbol.parseCodeBeforeSymbolName(symbol, symbol.body); // no need to handle boolean return value here
 
         if (symbol.type === CSharpSymbolType.method && symbol.name.includes(".")) symbol.accessModifier = CSharpAccessModifier.explicitInterfaceImplementation;
-        // else if (symbol.type === CSharpSymbolType.class && documentSymbol.kind === vscode.SymbolKind.Method && parent && symbol.range.isEqual(parent.range!)) symbol.type = CSharpSymbolType.primaryConstructor;
 
         let children = documentSymbol.children.sort((a, b) => a.range.start.compareTo(b.range.start));
 
         if (children.length > 0 && CSharpSymbol.isPrimaryConstructor(children[0], documentSymbol)) {
             // create (remove) primary constructor symbol now to use its calculated range
             const primaryConstructorSymbol = CSharpSymbol.create(textDocument, children.shift()!, symbol);
-            symbol.children.push(primaryConstructorSymbol);
+            if (primaryConstructorSymbol) {
+                symbol.children.push(primaryConstructorSymbol);
 
-            children = children.filter(c => !primaryConstructorSymbol.range!.contains(c.range));
+                children = children.filter(c => !primaryConstructorSymbol.range!.contains(c.range));
+            }
         }
 
-        // if (children.length > 0 && CSharpSymbol.isPrimaryConstructor(children[0], documentSymbol)) {
-        //     children = children.filter((c, i) => i === 0 || !children[0].range!.contains(c.range));
-        // }
-
         if (children.length > 0 && symbol.type !== CSharpSymbolType.enum) {
-            symbol.children.push(...children.map(ds => CSharpSymbol.create(textDocument, ds, symbol)));
+            symbol.children.push(...children.map(ds => CSharpSymbol.create(textDocument, ds, symbol)).filter(s => s !== undefined) as CSharpSymbol[]);
         }
 
         return symbol;
@@ -140,7 +139,7 @@ export class CSharpSymbol {
             ?? textDocument.lineAt(textDocument.lineCount - 1)!.range.end;
 
         const parentOrFileOpenedPosition = parent
-            ? CSharpSymbol.positionAtStartOfCodeblock(parent.nameEndPosition ?? CSharpFile.zeroPosition, textDocument, parentOrFileEndPosition)
+            ? CSharpSymbol.positionAtStartOfCodeblock(parent.nameRange?.end ?? CSharpFile.zeroPosition, textDocument, parentOrFileEndPosition)
             : CSharpFile.zeroPosition;
 
         let currentBlockStart: vscode.Position | undefined;
@@ -175,7 +174,7 @@ export class CSharpSymbol {
 
     /** Creates {@link CSharpSymbol} array of provided {@link documentSymbols}, organizes parent-to-child hierarchy and orders symbols by file position recursively. */
     static createSymbols(textDocument: vscode.TextDocument, documentSymbols: vscode.DocumentSymbol[]): CSharpSymbol[] {
-        const symbols = documentSymbols.sort((a, b) => a.range.start.compareTo(b.range.start)).map(ds => CSharpSymbol.create(textDocument, ds));
+        const symbols = documentSymbols.sort((a, b) => a.range.start.compareTo(b.range.start)).map(ds => CSharpSymbol.create(textDocument, ds)).filter(s => s !== undefined) as CSharpSymbol[];
         CSharpSymbol.organizeParentToChildHierarchy(symbols);
         return CSharpSymbol.orderByPosition(symbols);
     }
@@ -237,7 +236,7 @@ export class CSharpSymbol {
             startIndex++;
         }
 
-        if (symbol.type !== CSharpSymbolType.primaryConstructor && symbol.type !== CSharpSymbolType.event) {
+        if (symbol.type !== CSharpSymbolType.primaryConstructor && (symbol.type !== CSharpSymbolType.event || text[textDocument.offsetAt(documentSymbolRange.end) - 1] === "}")) {
             return documentSymbolRange.with({ start: textDocument.positionAt(startIndex) });
         }
 
@@ -262,7 +261,7 @@ export class CSharpSymbol {
         return a.position.compareTo(b.position) ?? 0;
     }
 
-    private static createNamespace(namespace: string, range: vscode.Range, nameEndPosition: vscode.Position, isFileScoped: boolean): CSharpSymbol {
+    private static createNamespace(namespace: string, range: vscode.Range, nameRange: vscode.Range, isFileScoped: boolean): CSharpSymbol {
         const symbol = new CSharpSymbol();
 
         if (isFileScoped) {
@@ -274,7 +273,7 @@ export class CSharpSymbol {
         }
 
         symbol.name = namespace;
-        symbol.nameEndPosition = nameEndPosition;
+        symbol.nameRange = nameRange;
         symbol.position = range.start;
         symbol.range = range;
         symbol.type = CSharpSymbolType.namespace;
@@ -304,7 +303,7 @@ export class CSharpSymbol {
                 const symbol = CSharpSymbol.createNamespace(
                     namespace,
                     new vscode.Range(textDocument.positionAt(m.index), textDocument.positionAt(m.index + declaration.length)),
-                    textDocument.positionAt(m.index + signature.length),
+                    new vscode.Range(textDocument.positionAt(m.index + (signature.length - namespace.length)), textDocument.positionAt(m.index + signature.length)),
                     isFileScoped || enforceFileScopedNamespace);
 
                 symbols.push(symbol);

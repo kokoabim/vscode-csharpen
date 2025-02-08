@@ -1,3 +1,4 @@
+import * as vscode from "vscode";
 import { CSharpenVSCodeExtensionSettings } from "./CSharpenVSCodeExtensionSettings";
 import { CSharpFile } from '../CSharp/CSharpFile';
 import { CSharpOrganizer } from "../CSharp/CSharpOrganizer";
@@ -5,10 +6,10 @@ import { FileDiagnostic, FileDiagnosticSeverity } from "../Models/FileDiagnostic
 import { FileFilter, FileFilterStatus } from "../Models/FileFilter";
 import { VSCodeCommand } from "./VSCodeCommand";
 import { VSCodeExtension } from "./VSCodeExtension";
-import * as vscode from "vscode";
 import { CSharpProjectFile, CSharpProjectPackageReference } from "../CSharp/CSharpProjectFile";
 import { FileSystem } from "../Utils/FileSystem";
 import { CSharpenWorkspaceSettings } from "./CSharpenWorkspaceSettings";
+import { CSharpSymbol } from "../CSharp/CSharpSymbol";
 
 /**
  * CSharpen — C# File Organizer VS Code extension
@@ -226,18 +227,28 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             const documentText = textEditor.document.getText();
 
             // eslint-disable-next-line no-unused-vars
-            const [sharpened, removedUnusedUsingsCount, didError, sharpenError] = await this.sharpenFile(settings, textEditor, documentText);
+            const [sharpened, removedUnusedUsingsCount, symbolsRenamedCount, didError, sharpenError] = await this.sharpenFile(settings, textEditor, documentText);
             if (!sharpened || didError) return;
 
-            let fileSizeDiffText = "";
+            let infoText = "";
             if (settings.showFileSizeDifferenceOnSharpen) {
                 const fileSizeBefore = documentText.length;
                 const fileSizeAfter = textEditor.document.getText().length;
                 const fileSizeDiff = fileSizeAfter - fileSizeBefore;
-                fileSizeDiffText = ` (${fileSizeDiff > 0 ? `+${fileSizeDiff}` : fileSizeDiff.toString()} size difference)`;
+                if (fileSizeDiff !== 0) infoText = ` ${fileSizeDiff > 0 ? `+${fileSizeDiff}` : fileSizeDiff.toString()} size diff`;
             }
 
-            this.information(`Sharpened.${fileSizeDiffText}`);
+            if (settings.symbolRenamingEnabled && symbolsRenamedCount > 0) {
+                infoText += `${infoText ? "," : ""} ${symbolsRenamedCount} symbol${symbolsRenamedCount > 1 ? "s" : ""} renamed`;
+            }
+
+            if (removedUnusedUsingsCount > 0) {
+                infoText += `${infoText ? "," : ""} ${removedUnusedUsingsCount} unused using${removedUnusedUsingsCount > 1 ? "s" : ""} removed`;
+            }
+
+            infoText = infoText ? infoText.trim() : "Sharpened.";
+
+            this.information(`${infoText}`, true);
         });
     }
 
@@ -440,7 +451,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                         }
                         else if (sharpenFiles) {
                             // eslint-disable-next-line no-unused-vars
-                            const [sharpened, removedUnusedUsingsCount, didError, sharpenError] = await this.sharpenFile(settings, textEditor, textDocument.getText(), false);
+                            const [sharpened, removedUnusedUsingsCount, symbolsRenamedCount, didError, sharpenError] = await this.sharpenFile(settings, textEditor, textDocument.getText(), true);
 
                             if (didError) {
                                 if (!await askToContinueOnWarning(`Sharpening failed. You may address the failure now then continue.\n\n${sharpenError}`)) {
@@ -682,39 +693,57 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         });
     }
 
-    private async sharpenFile(settings: CSharpenVSCodeExtensionSettings, textEditor: vscode.TextEditor, documentText: string, showMessages = true): Promise<[sharpened: boolean, removedUnusedUsingsCount: number, didError: boolean, sharpenError: string | undefined]> {
+    private async sharpenFile(settings: CSharpenVSCodeExtensionSettings, textEditor: vscode.TextEditor, documentText: string, batchProcessing = false):
+        Promise<[sharpened: boolean, removedUnusedUsingsCount: number, symbolsRenamedCount: number, didError: boolean, sharpenError: string | undefined]> {
+
         const [fileFilterStatus, fileFilterReason] = FileFilter.checkAll(vscode.workspace.asRelativePath(textEditor.document.uri), documentText, settings.fileFilters);
         if (fileFilterStatus === FileFilterStatus.deny) {
-            if (showMessages) this.warning(fileFilterReason!);
-            return [false, 0, false, fileFilterReason];
+            if (!batchProcessing) this.warning(fileFilterReason!);
+            return [false, 0, 0, false, fileFilterReason];
         }
         else if (fileFilterStatus === FileFilterStatus.confirm) {
             const result = await vscode.window.showWarningMessage(`${fileFilterReason} — Override and continue? (Changes can be undone)`, "Continue", "Cancel");
-            if (result !== "Continue") return [false, 0, false, `Canceled: ${fileFilterReason}`];
+            if (result !== "Continue") return [false, 0, 0, false, `Canceled: ${fileFilterReason}`];
         }
 
         const removedUnusedUsingsCount = settings.removeUnusedUsingsOnSharpen ? await CSharpFile.removeUnusedUsings(textEditor) : 0;
         if (settings.formatDocumentOnSharpen) await vscode.commands.executeCommand('editor.action.formatDocument', textEditor.document.uri);
 
         let csharpFile;
-        try {
-            csharpFile = await CSharpFile.create(textEditor.document);
-            if (!csharpFile.hasChildren) {
-                if (showMessages) this.warning("No C# symbols found.");
-                return [false, removedUnusedUsingsCount, false, "No C# symbols found"];
+        let reCreateCSharpFile = false;
+        let symbolsRenamedCount = 0;
+
+        do {
+            try {
+                csharpFile = await CSharpFile.create(textEditor.document);
+                if (!csharpFile.hasChildren) {
+                    if (!batchProcessing) this.warning("No C# symbols found.");
+                    return [false, removedUnusedUsingsCount, symbolsRenamedCount, false, "No C# symbols found"];
+                }
             }
-        }
-        catch (e: any) {
-            if (showMessages) this.error(e.message);
-            return [false, removedUnusedUsingsCount, true, `Error: ${e.message}`];
-        }
+            catch (e: any) {
+                if (!batchProcessing) this.error(e.message);
+                return [false, removedUnusedUsingsCount, symbolsRenamedCount, true, `Error: ${e.message}`];
+            }
+
+            if (!batchProcessing && settings.symbolRenamingEnabled && settings.symbolRenaming.length > 0) {
+                try {
+                    if (reCreateCSharpFile = await this.applySymbolRenaming(settings, textEditor, csharpFile.children)) symbolsRenamedCount++;
+                }
+                catch (e: any) {
+                    reCreateCSharpFile = false;
+                    if (!batchProcessing) this.warning(`Error renaming symbol: ${e.message}`);
+                    // NOTE: do not return on this error, continue to sharpen file
+                }
+            }
+        } while (reCreateCSharpFile); // NOTE: have to re-create the CSharpFile after each renamed symbol because of the symbol position values changing
 
         try {
             CSharpOrganizer.organizeFile(settings, csharpFile);
         }
         catch (e: any) {
-            if (showMessages) this.error(e.message);
-            return [false, removedUnusedUsingsCount, true, `Error: ${e.message}`];
+            if (!batchProcessing) this.error(e.message);
+            return [false, removedUnusedUsingsCount, symbolsRenamedCount, true, `Error: ${e.message}`];
         }
 
         await textEditor.edit(tee => {
@@ -723,7 +752,26 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
         if (settings.formatDocumentOnSharpen) await vscode.commands.executeCommand('editor.action.formatDocument', textEditor.document.uri);
 
-        return [true, removedUnusedUsingsCount, false, undefined];
+        return [true, removedUnusedUsingsCount, symbolsRenamedCount, false, undefined];
+    }
+
+    private async applySymbolRenaming(settings: CSharpenVSCodeExtensionSettings, textEditor: vscode.TextEditor, symbols: CSharpSymbol[]): Promise<boolean> {
+        if (symbols.length === 0) return false;
+
+        for await (const symbol of symbols) {
+            for await (const symbolRename of settings.symbolRenaming.filter(sr => !sr.disabled)) {
+                if (symbolRename.match(symbol)) {
+                    const workspaceEdit = await vscode.commands.executeCommand("vscode.executeDocumentRenameProvider", textEditor.document.uri, symbol.nameRange?.start, symbolRename.newSymbolName) as vscode.WorkspaceEdit | undefined;
+                    if (workspaceEdit) {
+                        if (await vscode.workspace.applyEdit(workspaceEdit)) return true;
+                    }
+                }
+
+                if (symbol.hasChildren && (await this.applySymbolRenaming(settings, textEditor, symbol.children))) return true;
+            }
+        }
+
+        return false;
     }
 }
 

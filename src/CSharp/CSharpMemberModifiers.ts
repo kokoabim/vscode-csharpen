@@ -16,6 +16,10 @@ export enum CSharpMemberModifiers {
 }
 
 export namespace CSharpMemberModifiers {
+    export function flagExists(modifiers: CSharpMemberModifiers, flag: CSharpMemberModifiers): boolean {
+        return (modifiers & flag) === flag;
+    }
+
     export function fromString(memberModifiers: string): CSharpMemberModifiers {
         let modifiers = CSharpMemberModifiers.none;
         if (memberModifiers.includes("abstract")) modifiers |= CSharpMemberModifiers.abstract;
@@ -31,5 +35,9 @@ export namespace CSharpMemberModifiers {
         if (memberModifiers.includes("virtual")) modifiers |= CSharpMemberModifiers.virtual;
         if (memberModifiers.includes("volatile")) modifiers |= CSharpMemberModifiers.volatile;
         return modifiers;
+    }
+
+    export function fromDelimitedString(memberModifiers: string, delimiter = ","): CSharpMemberModifiers {
+        return fromString(memberModifiers.split(delimiter).map(m => m.trim()).join(" "));
     }
 }
