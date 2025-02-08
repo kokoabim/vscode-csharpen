@@ -1,15 +1,16 @@
 import * as vscode from "vscode";
-import { CSharpenVSCodeExtensionSettings } from "./CSharpenVSCodeExtensionSettings";
-import { CSharpFile } from '../CSharp/CSharpFile';
+
+import { CSharpFile } from "../CSharp/CSharpFile";
 import { CSharpOrganizer } from "../CSharp/CSharpOrganizer";
+import { CSharpProjectFile, CSharpProjectPackageReference } from "../CSharp/CSharpProjectFile";
+import { CSharpSymbol } from "../CSharp/CSharpSymbol";
 import { FileDiagnostic, FileDiagnosticSeverity } from "../Models/FileDiagnostic";
 import { FileFilter, FileFilterStatus } from "../Models/FileFilter";
+import { FileSystem } from "../Utils/FileSystem";
+import { CSharpenVSCodeExtensionSettings } from "./CSharpenVSCodeExtensionSettings";
+import { CSharpenWorkspaceSettings } from "./CSharpenWorkspaceSettings";
 import { VSCodeCommand } from "./VSCodeCommand";
 import { VSCodeExtension } from "./VSCodeExtension";
-import { CSharpProjectFile, CSharpProjectPackageReference } from "../CSharp/CSharpProjectFile";
-import { FileSystem } from "../Utils/FileSystem";
-import { CSharpenWorkspaceSettings } from "./CSharpenWorkspaceSettings";
-import { CSharpSymbol } from "../CSharp/CSharpSymbol";
 
 /**
  * CSharpen — C# File Organizer VS Code extension
@@ -30,6 +31,39 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
     static use(context: vscode.ExtensionContext): CSharpenVSCodeExtension {
         return new CSharpenVSCodeExtension(context);
+    }
+
+    private async applySymbolRenaming(settings: CSharpenVSCodeExtensionSettings, textEditor: vscode.TextEditor, symbols: CSharpSymbol[]): Promise<boolean> {
+        if (symbols.length === 0) return false;
+
+        for await (const symbolRename of settings.symbolRenaming.filter(sr => !sr.disabled)) {
+            for await (const symbol of symbols) {
+                if (symbolRename.match(symbol)) {
+                    if (symbols.some(s => s !== symbol && s.name === symbolRename.newSymbolName && s.parent === symbol.parent)) {
+                        // this.outputLine(`${symbolRename.name}: '${symbol.memberName}' cannot be renamed to '${symbolRename.newSymbolName}' because a sibling symbol with that name already exists.`, true);
+                        continue;
+                    }
+
+                    const workspaceEdit = await vscode.commands.executeCommand("vscode.executeDocumentRenameProvider", textEditor.document.uri, symbol.nameRange?.start, symbolRename.newSymbolName) as vscode.WorkspaceEdit | undefined;
+                    if (workspaceEdit) {
+                        if (await vscode.workspace.applyEdit(workspaceEdit)) {
+                            this.outputLine(`${symbolRename.name}: '${symbol.memberName}' renamed to '${symbolRename.newSymbolName}'.`, true);
+                            return true;
+                        }
+                        else {
+                            this.outputLine(`${symbolRename.name}: '${symbol.memberName}' cannot be renamed to '${symbolRename.newSymbolName}' because the rename provider did not apply the edit.`, true);
+                        }
+                    }
+                    else {
+                        this.outputLine(`${symbolRename.name}: '${symbol.memberName}' cannot be renamed to '${symbolRename.newSymbolName}' because the rename provider did not return a workspace edit.`, true);
+                    }
+                }
+
+                if (symbol.hasChildren && (await this.applySymbolRenaming(settings, textEditor, symbol.children))) return true;
+            }
+        }
+
+        return false;
     }
 
     private createCreateWorkspaceSettingsFileCommand(): VSCodeCommand {
@@ -235,7 +269,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                 const fileSizeBefore = documentText.length;
                 const fileSizeAfter = textEditor.document.getText().length;
                 const fileSizeDiff = fileSizeAfter - fileSizeBefore;
-                if (fileSizeDiff !== 0) infoText = ` ${fileSizeDiff > 0 ? `+${fileSizeDiff}` : fileSizeDiff.toString()} size diff`;
+                if (fileSizeDiff !== 0) infoText = ` ${fileSizeDiff > 0 ? `+${fileSizeDiff}` : fileSizeDiff.toString()} size`;
             }
 
             if (settings.symbolRenamingEnabled && symbolsRenamedCount > 0) {
@@ -736,6 +770,8 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                     // NOTE: do not return on this error, continue to sharpen file
                 }
             }
+
+            // if (reCreateCSharpFile && !batchProcessing) this.outputLine(`Re-parsing symbols after symbol renaming.`);
         } while (reCreateCSharpFile); // NOTE: have to re-create the CSharpFile after each renamed symbol because of the symbol position values changing
 
         try {
@@ -753,25 +789,6 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         if (settings.formatDocumentOnSharpen) await vscode.commands.executeCommand('editor.action.formatDocument', textEditor.document.uri);
 
         return [true, removedUnusedUsingsCount, symbolsRenamedCount, false, undefined];
-    }
-
-    private async applySymbolRenaming(settings: CSharpenVSCodeExtensionSettings, textEditor: vscode.TextEditor, symbols: CSharpSymbol[]): Promise<boolean> {
-        if (symbols.length === 0) return false;
-
-        for await (const symbol of symbols) {
-            for await (const symbolRename of settings.symbolRenaming.filter(sr => !sr.disabled)) {
-                if (symbolRename.match(symbol)) {
-                    const workspaceEdit = await vscode.commands.executeCommand("vscode.executeDocumentRenameProvider", textEditor.document.uri, symbol.nameRange?.start, symbolRename.newSymbolName) as vscode.WorkspaceEdit | undefined;
-                    if (workspaceEdit) {
-                        if (await vscode.workspace.applyEdit(workspaceEdit)) return true;
-                    }
-                }
-
-                if (symbol.hasChildren && (await this.applySymbolRenaming(settings, textEditor, symbol.children))) return true;
-            }
-        }
-
-        return false;
     }
 }
 

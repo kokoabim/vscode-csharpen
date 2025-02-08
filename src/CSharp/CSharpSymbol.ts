@@ -56,6 +56,8 @@ export class CSharpSymbol {
 
     get isMultiLine(): boolean { return this.innerText.includes("\n"); }
 
+    get memberName(): string { return this.parent ? `${this.parent.name}.${this.name}` : this.name; }
+
     get text(): string {
         const regionStart = this.regions.start !== undefined ? `${(this.parent?.header.endsWith("{") ? CSharpenVSCodeExtensionSettings.shared().indentation : "")}#region ${this.regions.start}\n${this.canHaveChildren || this.isMultiLine ? "\n" : ""}` : "";
         const regionEnd = this.regions.end !== undefined ? `${this.canHaveChildren || this.isMultiLine ? "\n" : ""}\n${(this.parent?.header.endsWith("{") ? CSharpenVSCodeExtensionSettings.shared().indentation : "")}#endregion ${this.regions.end}` : "";

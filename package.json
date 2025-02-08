@@ -1,7 +1,7 @@
 {
     "name": "csharpen",
     "publisher": "spencerjames",
-    "version": "0.5.0",
+    "version": "0.5.1",
     "description": "Sharpen (organize) C# files by ordering, sorting and regionalizing symbols.",
     "displayName": "CSharpen — C# File Organizer",
     "shortName": "CSharpen",
@@ -781,12 +781,19 @@
                     },
                     "default": [
                         {
-                            "name": "MethodAsyncSuffix",
+                            "name": "AsyncMethodSuffix",
                             "replacement": "{name}Async",
                             "memberModifiers": "async",
                             "namePattern": "^(?<name>[a-zA-Z][a-zA-Z0-9_]+(?<!Async))$",
                             "returnTypePattern": "^(Value)?Task(<.*>)?$",
                             "types": "method"
+                        },
+                        {
+                            "name": "PrivateConstOrFieldUnderline",
+                            "replacement": "_{name:0-1:lower}{name:1}",
+                            "namePattern": "^(?<name>[a-zA-Z][a-zA-Z0-9_]+)$",
+                            "types": "constant,field",
+                            "accessModifier": "private"
                         }
                     ]
                 }

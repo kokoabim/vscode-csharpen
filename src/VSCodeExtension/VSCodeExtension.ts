@@ -1,5 +1,5 @@
-import { VSCodeCommand } from "./VSCodeCommand";
 import * as vscode from "vscode";
+import { VSCodeCommand } from "./VSCodeCommand";
 
 /**
  * VS Code extension
