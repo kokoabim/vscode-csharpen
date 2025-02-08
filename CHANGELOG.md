@@ -1,5 +1,10 @@
 ## β Beta
 
+#### 2025-02-08 — 0.5.1
+
+-   On symbol renaming, a symbol will not be renamed if its new name already exists as a sibling symbol under the same parent. This is to prevent name conflicts.
+-   Added a `PrivateConstOrFieldUnderline` symbol renaming configuration. There are now two available by default: `AsyncMethodSuffix` and `PrivateConstOrFieldUnderline`. Others can be added in settings, and others will be added in future versions. Note, symbol renaming configurations can be disabled in settings individually by settings `disabled` to `true`.
+
 #### 2025-02-07 — 0.5.0
 
 -   Added symbol renaming (on _sharpen_) based on definable logic and patterns. This is disabled during removal of unused packages references. This can be enabled in settings (`csharpen.symbolRenamingEnabled` and `csharpen.symbolRenaming`) and is disabled by default. Logic and patterns include: access modifier, member modifiers, symbol name pattern, return type pattern and symbol types. The renaming operation uses VS Code's built-in rename functionality thus all references in other files are renamed as well.
