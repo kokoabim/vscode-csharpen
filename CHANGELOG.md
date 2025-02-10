@@ -1,13 +1,17 @@
 ## β Beta
 
+#### 2025-02-09 — 0.5.2
+
+-   Minor changes in preparation for a new Coding Styles feature to be added in the next version.
+
 #### 2025-02-08 — 0.5.1
 
--   On symbol renaming, a symbol will not be renamed if its new name already exists as a sibling symbol under the same parent. This is to prevent name conflicts.
--   Added a `PrivateConstOrFieldUnderline` symbol renaming configuration. There are now two available by default: `AsyncMethodSuffix` and `PrivateConstOrFieldUnderline`. Others can be added in settings, and others will be added in future versions. Note, symbol renaming configurations can be disabled in settings individually by settings `disabled` to `true`.
+-   On Symbol Renaming, a symbol will not be renamed if its new name already exists as a sibling symbol under the same parent. This is to prevent name conflicts.
+-   Added a `PrivateConstOrFieldUnderline` Symbol Renaming configuration. There are now two available by default: `AsyncMethodSuffix` and `PrivateConstOrFieldUnderline`. Others can be added in settings, and others will be added in future versions. Note, Symbol Renaming configurations can be disabled in settings individually by settings `disabled` to `true`.
 
 #### 2025-02-07 — 0.5.0
 
--   Added symbol renaming (on _sharpen_) based on definable logic and patterns. This is disabled during removal of unused packages references. This can be enabled in settings (`csharpen.symbolRenamingEnabled` and `csharpen.symbolRenaming`) and is disabled by default. Logic and patterns include: access modifier, member modifiers, symbol name pattern, return type pattern and symbol types. The renaming operation uses VS Code's built-in rename functionality thus all references in other files are renamed as well.
+-   Added Symbol Renaming feature based on definable logic and patterns. This is disabled during removal of unused packages references. This can be enabled in settings (`csharpen.symbolRenamingEnabled` to enable on _sharpen_ and `csharpen.symbolRenaming` to define rules) and is disabled by default. Logic and patterns include: access modifier, member modifiers, symbol name pattern, return type pattern and symbol types. The renaming operation uses VS Code's built-in rename functionality thus all references in other files are renamed as well.
     -   Example use case (and a default setting): All methods that (1) include a member modifier of `async`, (2) have a return type of `Task` or `ValueTask` (with or without generic type arguments) and (3) the symbol name does not end with `Async` are renamed to have a suffix of `Async`.
 -   Fixed issue with handling `event` symbols. (Side note: I've discovered that primary constructors and events are the hardest symbols to handle because of what the VS Code API provides, next would be delegates.)
 

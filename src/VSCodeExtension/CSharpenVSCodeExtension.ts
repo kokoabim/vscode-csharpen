@@ -20,50 +20,68 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         super(context);
 
         this.addCommands(
+            // ! TODO: implement this in next release: this.createApplyCodingStyleToFileCommand(),
+            this.createCreateWorkspaceSettingsFileCommand(),
             this.createOutputFileDiagnosticsCommand(),
             this.createOutputFileDiagnosticsForProjectFilesCommand(),
             this.createRemoveUnusedReferencesCommand(),
             this.createRemoveUnusedUsingsCommand(),
+            this.createRenameSymbolsInFileCommand(),
             this.createSharpenFileCommand(),
-            this.createSharpenProjectFilesCommand(),
-            this.createCreateWorkspaceSettingsFileCommand());
+            this.createSharpenProjectFilesCommand()
+        );
     }
 
     static use(context: vscode.ExtensionContext): CSharpenVSCodeExtension {
         return new CSharpenVSCodeExtension(context);
     }
 
-    private async applySymbolRenaming(settings: CSharpenVSCodeExtensionSettings, textEditor: vscode.TextEditor, symbols: CSharpSymbol[]): Promise<boolean> {
-        if (symbols.length === 0) return false;
+    // ! TODO: implement this in next release
+    /*
+    private async applyCodingStylesToFile(settings: CSharpenVSCodeExtensionSettings, textEditor: vscode.TextEditor, symbols: CSharpSymbol[]): Promise<void> {
+        if (!settings.codingStyles.anyEnabled || symbols.length === 0) return;
+
+        for await (const symbol of symbols) {
+
+        }
+    }
+    */
+
+    private async applySymbolRenaming(settings: CSharpenVSCodeExtensionSettings, textEditor: vscode.TextEditor, symbols: CSharpSymbol[]): Promise<RenamedSymbol | undefined> {
+        if (symbols.length === 0) return;
 
         for await (const symbolRename of settings.symbolRenaming.filter(sr => !sr.disabled)) {
+            let newSymbolName: string | undefined;
             for await (const symbol of symbols) {
-                if (symbolRename.match(symbol)) {
-                    if (symbols.some(s => s !== symbol && s.name === symbolRename.newSymbolName && s.parent === symbol.parent)) {
-                        // this.outputLine(`${symbolRename.name}: '${symbol.memberName}' cannot be renamed to '${symbolRename.newSymbolName}' because a sibling symbol with that name already exists.`, true);
+                if (newSymbolName = symbolRename.process(symbol)) {
+                    if (symbols.some(s => s !== symbol && s.name === newSymbolName && s.parent === symbol.parent)) {
+                        // this.outputLine(`${symbolRename.name}: '${symbol.memberName}' cannot be renamed to '${newSymbolName}' because a sibling symbol with that name already exists`, true);
                         continue;
                     }
 
-                    const workspaceEdit = await vscode.commands.executeCommand("vscode.executeDocumentRenameProvider", textEditor.document.uri, symbol.nameRange?.start, symbolRename.newSymbolName) as vscode.WorkspaceEdit | undefined;
+                    const workspaceEdit = await vscode.commands.executeCommand("vscode.executeDocumentRenameProvider", textEditor.document.uri, symbol.nameRange?.start, newSymbolName) as vscode.WorkspaceEdit | undefined;
                     if (workspaceEdit) {
                         if (await vscode.workspace.applyEdit(workspaceEdit)) {
-                            this.outputLine(`${symbolRename.name}: '${symbol.memberName}' renamed to '${symbolRename.newSymbolName}'.`, true);
-                            return true;
+                            this.outputLine(`${symbolRename.name}: '${symbol.memberName}' renamed to '${newSymbolName}'`, true);
+                            return new RenamedSymbol(symbolRename.name, symbol.name, newSymbolName!, symbol.memberName);
                         }
                         else {
-                            this.outputLine(`${symbolRename.name}: '${symbol.memberName}' cannot be renamed to '${symbolRename.newSymbolName}' because the rename provider did not apply the edit.`, true);
+                            this.outputLine(`${symbolRename.name}: '${symbol.memberName}' cannot be renamed to '${newSymbolName}' because the rename provider did not apply the edit`, true);
                         }
                     }
                     else {
-                        this.outputLine(`${symbolRename.name}: '${symbol.memberName}' cannot be renamed to '${symbolRename.newSymbolName}' because the rename provider did not return a workspace edit.`, true);
+                        this.outputLine(`${symbolRename.name}: '${symbol.memberName}' cannot be renamed to '${newSymbolName}' because the rename provider did not return a workspace edit`, true);
                     }
                 }
 
-                if (symbol.hasChildren && (await this.applySymbolRenaming(settings, textEditor, symbol.children))) return true;
+                if (symbol.hasChildren) {
+                    const renamedSymbol = await this.applySymbolRenaming(settings, textEditor, symbol.children);
+                    if (renamedSymbol) return renamedSymbol;
+                }
             }
         }
 
-        return false;
+        return;
     }
 
     private createCreateWorkspaceSettingsFileCommand(): VSCodeCommand {
@@ -224,6 +242,70 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         });
     }
 
+    // ! TODO: implement this in next release
+    /*
+    private createApplyCodingStyleToFileCommand(): VSCodeCommand {
+        return new VSCodeCommand("kokoabim.csharpen.apply-coding-styles-to-file", async () => {
+            if (!super.isWorkspaceReady()) return;
+
+            const textEditor = await this.getTextEditor();
+            if (!textEditor) return;
+
+            const settings = CSharpenVSCodeExtensionSettings.shared(true);
+        });
+    }
+    */
+
+    private createRenameSymbolsInFileCommand(): VSCodeCommand {
+        return new VSCodeCommand("kokoabim.csharpen.rename-symbols-in-file", async () => {
+            if (!super.isWorkspaceReady()) return;
+
+            const textEditor = await this.getTextEditor();
+            if (!textEditor) return;
+
+            const settings = CSharpenVSCodeExtensionSettings.shared(true);
+            const symbolRenaming = settings.symbolRenaming.filter(sr => !sr.disabled);
+            if (symbolRenaming.length === 0) {
+                await this.information("No symbol renaming rules found.");
+                return;
+            }
+
+            let csharpFile;
+            let repeat = false;
+            const renamedSymbols: RenamedSymbol[] = [];
+
+            do {
+                repeat = false;
+
+                try {
+                    csharpFile = await CSharpFile.create(textEditor.document);
+                    if (!csharpFile.hasChildren) {
+                        await this.warning("No C# symbols found.");
+                        return;
+                    }
+                }
+                catch (e: any) {
+                    await this.error(e.message);
+                    return;
+                }
+
+                try {
+                    const renamedSymbol = await this.applySymbolRenaming(settings, textEditor, csharpFile.children);
+                    if (renamedSymbol) {
+                        renamedSymbols.push(renamedSymbol);
+                        repeat = true;
+                    }
+                }
+                catch (e: any) {
+                    await this.warning(`Error renaming symbol: ${e.message}`);
+                }
+            } while (repeat);
+
+            if (renamedSymbols.length > 0) await this.information(`Renamed ${renamedSymbols.length} symbol${renamedSymbols.length > 1 ? "s" : ""}.`);
+            else await this.information("No symbols renamed.");
+        });
+    }
+
     private createSharpenFileCommand(): VSCodeCommand {
         return new VSCodeCommand("kokoabim.csharpen.sharpen-file", async () => {
             if (!await super.isWorkspaceReady()) { return; }
@@ -261,7 +343,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             const documentText = textEditor.document.getText();
 
             // eslint-disable-next-line no-unused-vars
-            const [sharpened, removedUnusedUsingsCount, symbolsRenamedCount, didError, sharpenError] = await this.sharpenFile(settings, textEditor, documentText);
+            const [sharpened, removedUnusedUsingsCount, symbolsRenamed, didError, sharpenError] = await this.sharpenFile(settings, textEditor, documentText);
             if (!sharpened || didError) return;
 
             let infoText = "";
@@ -269,20 +351,20 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                 const fileSizeBefore = documentText.length;
                 const fileSizeAfter = textEditor.document.getText().length;
                 const fileSizeDiff = fileSizeAfter - fileSizeBefore;
-                if (fileSizeDiff !== 0) infoText = ` ${fileSizeDiff > 0 ? `+${fileSizeDiff}` : fileSizeDiff.toString()} size`;
+                if (fileSizeDiff !== 0) infoText = ` ${fileSizeDiff > 0 ? `+${fileSizeDiff}` : fileSizeDiff.toString()} size difference`;
             }
 
-            if (settings.symbolRenamingEnabled && symbolsRenamedCount > 0) {
-                infoText += `${infoText ? "," : ""} ${symbolsRenamedCount} symbol${symbolsRenamedCount > 1 ? "s" : ""} renamed`;
+            if (symbolsRenamed.length > 0) {
+                infoText += `${infoText ? "," : ""} ${symbolsRenamed.length} symbol${symbolsRenamed.length !== 1 ? "s" : ""} renamed`;
             }
 
             if (removedUnusedUsingsCount > 0) {
-                infoText += `${infoText ? "," : ""} ${removedUnusedUsingsCount} unused using${removedUnusedUsingsCount > 1 ? "s" : ""} removed`;
+                infoText += `${infoText ? "," : ""} ${removedUnusedUsingsCount} unused using${removedUnusedUsingsCount !== 1 ? "s" : ""} removed`;
             }
 
             infoText = infoText ? infoText.trim() : "Sharpened.";
 
-            this.information(`${infoText}`, true);
+            await this.information(`${infoText}`, true);
         });
     }
 
@@ -728,58 +810,63 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
     }
 
     private async sharpenFile(settings: CSharpenVSCodeExtensionSettings, textEditor: vscode.TextEditor, documentText: string, batchProcessing = false):
-        Promise<[sharpened: boolean, removedUnusedUsingsCount: number, symbolsRenamedCount: number, didError: boolean, sharpenError: string | undefined]> {
+        Promise<[sharpened: boolean, removedUnusedUsingsCount: number, renamedSymbols: RenamedSymbol[], didError: boolean, sharpenError: string | undefined]> {
 
         const [fileFilterStatus, fileFilterReason] = FileFilter.checkAll(vscode.workspace.asRelativePath(textEditor.document.uri), documentText, settings.fileFilters);
         if (fileFilterStatus === FileFilterStatus.deny) {
-            if (!batchProcessing) this.warning(fileFilterReason!);
-            return [false, 0, 0, false, fileFilterReason];
+            if (!batchProcessing) await this.warning(fileFilterReason!);
+            return [false, 0, [], false, fileFilterReason];
         }
         else if (fileFilterStatus === FileFilterStatus.confirm) {
             const result = await vscode.window.showWarningMessage(`${fileFilterReason} — Override and continue? (Changes can be undone)`, "Continue", "Cancel");
-            if (result !== "Continue") return [false, 0, 0, false, `Canceled: ${fileFilterReason}`];
+            if (result !== "Continue") return [false, 0, [], false, `Canceled: ${fileFilterReason}`];
         }
 
         const removedUnusedUsingsCount = settings.removeUnusedUsingsOnSharpen ? await CSharpFile.removeUnusedUsings(textEditor) : 0;
         if (settings.formatDocumentOnSharpen) await vscode.commands.executeCommand('editor.action.formatDocument', textEditor.document.uri);
 
         let csharpFile;
-        let reCreateCSharpFile = false;
-        let symbolsRenamedCount = 0;
+        let repeat = false;
+        const renamedSymbols: RenamedSymbol[] = [];
 
         do {
+            repeat = false;
+
             try {
                 csharpFile = await CSharpFile.create(textEditor.document);
                 if (!csharpFile.hasChildren) {
-                    if (!batchProcessing) this.warning("No C# symbols found.");
-                    return [false, removedUnusedUsingsCount, symbolsRenamedCount, false, "No C# symbols found"];
+                    if (!batchProcessing) await this.warning("No C# symbols found.");
+                    return [false, removedUnusedUsingsCount, renamedSymbols, false, "No C# symbols found"];
                 }
             }
             catch (e: any) {
-                if (!batchProcessing) this.error(e.message);
-                return [false, removedUnusedUsingsCount, symbolsRenamedCount, true, `Error: ${e.message}`];
+                if (!batchProcessing) await this.error(e.message);
+                return [false, removedUnusedUsingsCount, renamedSymbols, true, `Error: ${e.message}`];
             }
 
             if (!batchProcessing && settings.symbolRenamingEnabled && settings.symbolRenaming.length > 0) {
                 try {
-                    if (reCreateCSharpFile = await this.applySymbolRenaming(settings, textEditor, csharpFile.children)) symbolsRenamedCount++;
+                    const renamedSymbol = await this.applySymbolRenaming(settings, textEditor, csharpFile.children);
+                    if (renamedSymbol) {
+                        renamedSymbols.push(renamedSymbol);
+                        repeat = true;
+                    }
                 }
                 catch (e: any) {
-                    reCreateCSharpFile = false;
-                    if (!batchProcessing) this.warning(`Error renaming symbol: ${e.message}`);
+                    if (!batchProcessing) await this.warning(`Error renaming symbol: ${e.message}`);
                     // NOTE: do not return on this error, continue to sharpen file
                 }
             }
 
             // if (reCreateCSharpFile && !batchProcessing) this.outputLine(`Re-parsing symbols after symbol renaming.`);
-        } while (reCreateCSharpFile); // NOTE: have to re-create the CSharpFile after each renamed symbol because of the symbol position values changing
+        } while (repeat); // NOTE: have to re-create the CSharpFile after each renamed symbol because of the symbol position values changing
 
         try {
             CSharpOrganizer.organizeFile(settings, csharpFile);
         }
         catch (e: any) {
-            if (!batchProcessing) this.error(e.message);
-            return [false, removedUnusedUsingsCount, symbolsRenamedCount, true, `Error: ${e.message}`];
+            if (!batchProcessing) await this.error(e.message);
+            return [false, removedUnusedUsingsCount, renamedSymbols, true, `Error: ${e.message}`];
         }
 
         await textEditor.edit(tee => {
@@ -788,7 +875,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
         if (settings.formatDocumentOnSharpen) await vscode.commands.executeCommand('editor.action.formatDocument', textEditor.document.uri);
 
-        return [true, removedUnusedUsingsCount, symbolsRenamedCount, false, undefined];
+        return [true, removedUnusedUsingsCount, renamedSymbols, false, undefined];
     }
 }
 
@@ -798,6 +885,10 @@ class DocumentSymbolCodeActions {
     constructor(public documentSymbol: vscode.DocumentSymbol, public codeActions: vscode.CodeAction[] = []) { }
 
     get hasAny(): boolean { return this.codeActions.length > 0 || this.children.some(c => c.hasAny); }
+}
+
+class RenamedSymbol {
+    constructor(public symbolRenamingName: string, public previousName: string, public newName: string, public previousMemberName: string) { }
 }
 
 class TextDocumentCodeActions {

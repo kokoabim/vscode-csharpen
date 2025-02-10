@@ -12,6 +12,10 @@ export enum CSharpAccessModifier {
 }
 
 export namespace CSharpAccessModifier {
+    export function fromDelimitedString(accessModifiers: string, delimiter = ","): CSharpAccessModifier[] {
+        return accessModifiers.split(delimiter).map(m => fromString(m.trim())).filter(m => m !== CSharpAccessModifier.none);
+    }
+
     export function fromString(accessModifier: string): CSharpAccessModifier {
         if (accessModifier.includes("public")) return CSharpAccessModifier.public;
         // do not use: if (accessModifier.includes("explicit interface")) return CSharpAccessModifier.explicitInterfaceImplementation;

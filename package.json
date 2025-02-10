@@ -1,7 +1,7 @@
 {
     "name": "csharpen",
     "publisher": "spencerjames",
-    "version": "0.5.1",
+    "version": "0.5.2",
     "description": "Sharpen (organize) C# files by ordering, sorting and regionalizing symbols.",
     "displayName": "CSharpen — C# File Organizer",
     "shortName": "CSharpen",
@@ -52,14 +52,26 @@
             },
             {
                 "category": "CSharpen",
+                "title": "Remove Unused Using Declarations",
+                "command": "kokoabim.csharpen.remove-unused-usings",
+                "enablement": "editorLangId == csharp || resourceLangId == csharp"
+            },
+            {
+                "category": "CSharpen",
                 "title": "Remove Unused References Of Project...",
                 "command": "kokoabim.csharpen.remove-unused-references",
                 "enablement": "resourceExtname == .csproj || editorLangId == csharp || resourceLangId == csharp"
             },
             {
                 "category": "CSharpen",
-                "title": "Remove Unused Using Declarations",
-                "command": "kokoabim.csharpen.remove-unused-usings",
+                "title": "Apply Coding Styles",
+                "command": "kokoabim.csharpen.apply-coding-styles-to-file",
+                "enablement": "editorLangId == csharp || resourceLangId == csharp"
+            },
+            {
+                "category": "CSharpen",
+                "title": "Rename Symbols",
+                "command": "kokoabim.csharpen.rename-symbols-in-file",
                 "enablement": "editorLangId == csharp || resourceLangId == csharp"
             },
             {
@@ -750,13 +762,13 @@
                                 "type": "string",
                                 "description": "Replacement format. Use `{name}` to reference the `namePattern` matched `name` group. Example: `{name}Async`"
                             },
-                            "accessModifier": {
+                            "accessModifiers": {
                                 "type": "string",
-                                "description": "Access modifier to match."
+                                "description": "Access modifiers, delimited by commas, to match. Example: `private protected,private`"
                             },
                             "memberModifiers": {
                                 "type": "string",
-                                "description": "Member modifiers, delimited by commas, to match."
+                                "description": "Member modifiers, delimited by commas, to match. Example: `async`"
                             },
                             "namePattern": {
                                 "type": "string",
@@ -789,11 +801,24 @@
                             "types": "method"
                         },
                         {
-                            "name": "PrivateConstOrFieldUnderline",
+                            "name": "InterfaceFormat",
+                            "replacement": "I{name:0-1:upper}{name:1}",
+                            "namePattern": "^(?<name>[^I][a-zA-Z0-9_]+)$",
+                            "types": "interface"
+                        },
+                        {
+                            "name": "PrivateConstOrFieldFormat",
                             "replacement": "_{name:0-1:lower}{name:1}",
                             "namePattern": "^(?<name>[a-zA-Z][a-zA-Z0-9_]+)$",
                             "types": "constant,field",
-                            "accessModifier": "private"
+                            "accessModifiers": "private protected,private"
+                        },
+                        {
+                            "name": "NonPrivateMemberFormat",
+                            "replacement": "{name:0-1:upper}{name:1}",
+                            "namePattern": "^_*(?<name>[a-z][a-zA-Z0-9_]+)$",
+                            "types": "constant,field,method,property,enum,event,delegate",
+                            "accessModifiers": "!:private protected,private"
                         }
                     ]
                 }

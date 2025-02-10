@@ -80,7 +80,7 @@ export namespace CSharpSymbolType {
     }
 
     export function fromDelimitedString(types: string, delimiter = ","): CSharpSymbolType[] {
-        return types.split(delimiter).map(t => fromString(t)).filter(t => t !== CSharpSymbolType.none);
+        return types.split(delimiter).map(t => fromString(t.trim())).filter(t => t !== CSharpSymbolType.none);
     }
 
     export function toPluralString(symbolType: CSharpSymbolType): string {
