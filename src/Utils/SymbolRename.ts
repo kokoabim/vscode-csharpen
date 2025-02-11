@@ -20,10 +20,10 @@ export class SymbolRename extends SymbolMatcherPattern {
     process(symbol: CSharpSymbol): string | undefined {
         if (this.disabled) return;
 
-        const [success, symbolNameMatch] = this.matcher.process(symbol);
-        if (!success) return;
+        const match = this.matcher.process(symbol);
+        if (!match.isMatched) return;
 
-        const newSymbolName = this.createNewSymbolName(symbolNameMatch!);
+        const newSymbolName = this.createNewSymbolName(match.data.name);
         return symbol.name !== newSymbolName ? newSymbolName : undefined;
     }
 

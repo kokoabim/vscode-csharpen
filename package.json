@@ -1,7 +1,7 @@
 {
     "name": "csharpen",
     "publisher": "spencerjames",
-    "version": "0.5.2",
+    "version": "0.5.3",
     "description": "Sharpen (organize) C# files by ordering, sorting and regionalizing symbols.",
     "displayName": "CSharpen — C# File Organizer",
     "shortName": "CSharpen",
@@ -735,13 +735,13 @@
                 },
                 "csharpen.symbolRenamingEnabled": {
                     "order": 15,
-                    "markdownDescription": "Enable symbol renaming on _sharpen_.",
+                    "markdownDescription": "Apply Symbol Renaming on _sharpen_.",
                     "type": "boolean",
                     "default": false
                 },
                 "csharpen.symbolRenaming": {
                     "order": 16,
-                    "markdownDescription": "Symbol renaming rules.",
+                    "markdownDescription": "Symbol Renaming.",
                     "type": "array",
                     "items": {
                         "type": "object",
@@ -821,6 +821,24 @@
                             "accessModifiers": "!:private protected,private"
                         }
                     ]
+                },
+                "csharpen.codingStylesEnabled": {
+                    "order": 17,
+                    "markdownDescription": "Apply Coding Styles on _sharpen_.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "csharpen.codingStyles": {
+                    "order": 18,
+                    "markdownDescription": "Coding Styles.",
+                    "type": "object",
+                    "properties": {
+                        "useLanguageKeywordsInsteadOfFrameworkTypes": {
+                            "type": "boolean",
+                            "markdownDescription": "Use language keywords instead of BCL/Framework types.",
+                            "default": true
+                        }
+                    }
                 }
             }
         }

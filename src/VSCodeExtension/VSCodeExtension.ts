@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { VSCodeCommand } from "./VSCodeCommand";
+import { MessageResult } from "../Models/MessageResult";
 
 /**
  * VS Code extension
@@ -57,6 +58,17 @@ export abstract class VSCodeExtension {
         const textEditor = vscode.window.activeTextEditor;
         if (!textEditor && showWarningMessage) await this.warning("No editor is open.");
         return textEditor;
+    }
+
+    protected async showMessage(messageResult: MessageResult): Promise<boolean> {
+        if (!messageResult.message) return false;
+
+        if (messageResult.level === vscode.LogLevel.Info) await this.information(messageResult.message);
+        else if (messageResult.level === vscode.LogLevel.Error) await this.error(messageResult.message);
+        else if (messageResult.level === vscode.LogLevel.Warning) await this.warning(messageResult.message);
+        else return false;
+
+        return true;
     }
 
     protected async information(message: string, noPrefix = false): Promise<void> {

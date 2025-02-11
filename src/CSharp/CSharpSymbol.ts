@@ -22,9 +22,9 @@ export class CSharpSymbol {
     private footer = "";
     private fullName!: string;
     private header = "";
-    private position?: vscode.Position;
-    private range?: vscode.Range;
-    private textDocument?: vscode.TextDocument;
+    private position: vscode.Position | undefined;
+    private range: vscode.Range | undefined;
+    private textDocument: vscode.TextDocument | undefined;
 
     readonly data: { [key: string]: any } = {};
 
@@ -33,11 +33,12 @@ export class CSharpSymbol {
     implements: string[] = [];
     memberModifiers = CSharpMemberModifiers.none;
     name!: string;
-    nameRange?: vscode.Range;
-    namespace?: string;
-    parent?: CSharpSymbol;
+    nameRange: vscode.Range | undefined;
+    namespace: string | undefined;
+    parent: CSharpSymbol | undefined;
     regions: { start: string | undefined, end: string | undefined, groups: RegionGroup[] } = { start: undefined, end: undefined, groups: [] };
-    returnType?: string | undefined;
+    returnType: string | undefined;
+    returnTypeRange: vscode.Range | undefined;
     type = CSharpSymbolType.none;
 
     private constructor() { }
@@ -57,6 +58,10 @@ export class CSharpSymbol {
     get isMultiLine(): boolean { return this.innerText.includes("\n"); }
 
     get memberName(): string { return this.parent ? `${this.parent.name}.${this.name}` : this.name; }
+
+    get nameTypeHasGenerics(): boolean { return this.name?.includes("<") ?? false; }
+
+    get returnTypeHasGenerics(): boolean { return this.returnType?.includes("<") ?? false; }
 
     get text(): string {
         const regionStart = this.regions.start !== undefined ? `${(this.parent?.header.endsWith("{") ? CSharpenVSCodeExtensionSettings.shared().indentation : "")}#region ${this.regions.start}\n${this.canHaveChildren || this.isMultiLine ? "\n" : ""}` : "";
@@ -103,7 +108,7 @@ export class CSharpSymbol {
         symbol.body = textDocument.getText(symbol.range); // must be after 'adjustRange'
         symbol.accessModifier = CSharpSymbol.defaultAccessModifierForType(symbol.type, parent?.type);
 
-        CSharpSymbol.parseNameAndNamespace(symbol);
+        CSharpSymbol.parseNameAndNamespace(textDocument, symbol);
         CSharpSymbol.parseCodeBeforeSymbolName(symbol, symbol.body); // no need to handle boolean return value here
 
         if (symbol.type === CSharpSymbolType.method && symbol.name.includes(".")) symbol.accessModifier = CSharpAccessModifier.explicitInterfaceImplementation;
@@ -708,10 +713,10 @@ export class CSharpSymbol {
     }
 
     private static parseAttributesAndModifiers(symbol: CSharpSymbol, text: string): number {
-        const nameOffsetInBody = symbol.textDocument!.offsetAt(symbol.documentSymbol.selectionRange.start) - symbol.textDocument!.offsetAt(symbol.documentSymbol.range.start);
+        const nameOffsetInText = symbol.textDocument!.offsetAt(symbol.documentSymbol.selectionRange.start) - symbol.textDocument!.offsetAt(symbol.range!.start);
 
         CSharpPatterns.attributesAndModifiersRegExp.lastIndex = 0;
-        const attributesAndModifiersMatch = CSharpPatterns.attributesAndModifiersRegExp.exec(text.substring(0, nameOffsetInBody));
+        const attributesAndModifiersMatch = CSharpPatterns.attributesAndModifiersRegExp.exec(text.substring(0, nameOffsetInText));
 
         if (!attributesAndModifiersMatch) return 0;
 
@@ -765,6 +770,8 @@ export class CSharpSymbol {
             CSharpSymbol.parseImplementations(symbol, signature);
         }
 
+        if (textBeforeSymbolNameIndex === 0) textBeforeSymbolNameIndex = text.match(/^\s+/)?.[0].length ?? 0;
+
         return textBeforeSymbolNameIndex;
     }
 
@@ -803,6 +810,10 @@ export class CSharpSymbol {
         codeBeforeSymbolName = code.substring(afterAttributesAndModifiersIndex, symbolNameIndex - 1).trim();
         if (codeBeforeSymbolName) CSharpSymbol.parseSymbolTypeAndReturnTypeFromCode(symbol, codeBeforeSymbolName);
 
+        symbol.returnTypeRange = new vscode.Range(
+            symbol.textDocument!.positionAt(symbol.textDocument!.offsetAt(symbol.range!.start) + afterAttributesAndModifiersIndex),
+            symbol.textDocument!.positionAt(symbol.textDocument!.offsetAt(symbol.range!.start) + symbolNameIndex - 1));
+
         return true;
     }
 
@@ -820,7 +831,7 @@ export class CSharpSymbol {
         }
     }
 
-    private static parseNameAndNamespace(symbol: CSharpSymbol): void {
+    private static parseNameAndNamespace(textDocument: vscode.TextDocument, symbol: CSharpSymbol): void {
         let name: string | undefined;
         let namespace: string | undefined;
 
@@ -850,7 +861,15 @@ export class CSharpSymbol {
                 break;
         }
 
-        if (name) symbol.name = name;
+        if (name) {
+            symbol.name = name;
+
+            const nameStart = textDocument.offsetAt(symbol.nameRange!.start);
+            const nameEnd = textDocument.offsetAt(symbol.nameRange!.end);
+            const nameLengthChange = name.length - (nameEnd - nameStart);
+            symbol.nameRange = new vscode.Range(symbol.nameRange!.start, textDocument.positionAt(nameEnd + nameLengthChange));
+        }
+
         if (namespace) symbol.namespace = namespace;
     }
 

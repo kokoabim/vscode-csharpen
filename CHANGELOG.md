@@ -1,5 +1,10 @@
 ## β Beta
 
+#### 2025-02-10 — 0.5.3
+
+-   Added Coding Styles feature. Currently only one rule is available: `UseLanguageKeywordsInsteadOfFrameworkTypes`. This changes BCL/Framework types to language keywords on return and member types. Example: `System.String` to `string`, `Int32` to `int`, etc. More rules will be added in future versions.
+    -   Use command: `Apply Coding Styles` or always apply when _sharpening_ by setting `csharpen.codingStylesEnabled` to `true`.
+
 #### 2025-02-09 — 0.5.2
 
 -   Minor changes in preparation for a new Coding Styles feature to be added in the next version.

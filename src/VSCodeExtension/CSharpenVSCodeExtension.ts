@@ -4,13 +4,17 @@ import { CSharpFile } from "../CSharp/CSharpFile";
 import { CSharpOrganizer } from "../CSharp/CSharpOrganizer";
 import { CSharpProjectFile, CSharpProjectPackageReference } from "../CSharp/CSharpProjectFile";
 import { CSharpSymbol } from "../CSharp/CSharpSymbol";
+import { CSharpenVSCodeExtensionSettings } from "./CSharpenVSCodeExtensionSettings";
+import { CSharpenWorkspaceSettings } from "./CSharpenWorkspaceSettings";
 import { FileDiagnostic, FileDiagnosticSeverity } from "../Models/FileDiagnostic";
 import { FileFilter, FileFilterStatus } from "../Models/FileFilter";
 import { FileSystem } from "../Utils/FileSystem";
-import { CSharpenVSCodeExtensionSettings } from "./CSharpenVSCodeExtensionSettings";
-import { CSharpenWorkspaceSettings } from "./CSharpenWorkspaceSettings";
 import { VSCodeCommand } from "./VSCodeCommand";
 import { VSCodeExtension } from "./VSCodeExtension";
+import { ObjectResult } from "../Models/MessageResult";
+import { AppliedCodingStyle } from "../Models/AppliedCodingStyle";
+import { CSharpSymbolType } from "../CSharp/CSharpSymbolType";
+import { CSharpAccessModifier } from "../CSharp/CSharpAccessModifier";
 
 /**
  * CSharpen — C# File Organizer VS Code extension
@@ -20,7 +24,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         super(context);
 
         this.addCommands(
-            // ! TODO: implement this in next release: this.createApplyCodingStyleToFileCommand(),
+            this.createApplyCodingStyleToFileCommand(),
             this.createCreateWorkspaceSettingsFileCommand(),
             this.createOutputFileDiagnosticsCommand(),
             this.createOutputFileDiagnosticsForProjectFilesCommand(),
@@ -36,16 +40,19 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         return new CSharpenVSCodeExtension(context);
     }
 
-    // ! TODO: implement this in next release
-    /*
-    private async applyCodingStylesToFile(settings: CSharpenVSCodeExtensionSettings, textEditor: vscode.TextEditor, symbols: CSharpSymbol[]): Promise<void> {
-        if (!settings.codingStyles.anyEnabled || symbols.length === 0) return;
+    private async applyCodingStylesToFile(settings: CSharpenVSCodeExtensionSettings, textEditor: vscode.TextEditor): Promise<ObjectResult<AppliedCodingStyle[]>> {
+        if (!settings.codingStyles.anyEnabled) return ObjectResult.ok([], "No Coding Styles enabled.");
 
-        for await (const symbol of symbols) {
+        const processFileResult = await settings.codingStyles.processFile(textEditor);
 
+        if (processFileResult.object && processFileResult.object?.length > 0) {
+            processFileResult.object.forEach(cs => this.outputLine(cs.text(), true));
         }
+
+        await this.showMessage(processFileResult);
+
+        return processFileResult;
     }
-    */
 
     private async applySymbolRenaming(settings: CSharpenVSCodeExtensionSettings, textEditor: vscode.TextEditor, symbols: CSharpSymbol[]): Promise<RenamedSymbol | undefined> {
         if (symbols.length === 0) return;
@@ -62,15 +69,15 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                     const workspaceEdit = await vscode.commands.executeCommand("vscode.executeDocumentRenameProvider", textEditor.document.uri, symbol.nameRange?.start, newSymbolName) as vscode.WorkspaceEdit | undefined;
                     if (workspaceEdit) {
                         if (await vscode.workspace.applyEdit(workspaceEdit)) {
-                            this.outputLine(`${symbolRename.name}: '${symbol.memberName}' renamed to '${newSymbolName}'`, true);
+                            this.outputLine(`[SymbolRename: ${symbolRename.name}] ${symbol.memberName} (${CSharpAccessModifier.toString(symbol.accessModifier)} ${CSharpSymbolType.toString(symbol.type)}): name: ${symbol.name} -> ${newSymbolName}`, true);
                             return new RenamedSymbol(symbolRename.name, symbol.name, newSymbolName!, symbol.memberName);
                         }
                         else {
-                            this.outputLine(`${symbolRename.name}: '${symbol.memberName}' cannot be renamed to '${newSymbolName}' because the rename provider did not apply the edit`, true);
+                            this.outputLine(`[SymbolRename: ${symbolRename.name}] ${symbol.memberName} (${CSharpAccessModifier.toString(symbol.accessModifier)} ${CSharpSymbolType.toString(symbol.type)}) cannot be renamed: rename provider did not apply the edit`, true);
                         }
                     }
                     else {
-                        this.outputLine(`${symbolRename.name}: '${symbol.memberName}' cannot be renamed to '${newSymbolName}' because the rename provider did not return a workspace edit`, true);
+                        this.outputLine(`[SymbolRename: ${symbolRename.name}] ${symbol.memberName} (${CSharpAccessModifier.toString(symbol.accessModifier)} ${CSharpSymbolType.toString(symbol.type)}) cannot be renamed: rename provider did not return a workspace edit`, true);
                     }
                 }
 
@@ -242,8 +249,6 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         });
     }
 
-    // ! TODO: implement this in next release
-    /*
     private createApplyCodingStyleToFileCommand(): VSCodeCommand {
         return new VSCodeCommand("kokoabim.csharpen.apply-coding-styles-to-file", async () => {
             if (!super.isWorkspaceReady()) return;
@@ -252,9 +257,19 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             if (!textEditor) return;
 
             const settings = CSharpenVSCodeExtensionSettings.shared(true);
+            if (!settings.codingStyles.anyEnabled) {
+                await this.information("No Coding Styles enabled.");
+                return;
+            }
+
+            try {
+                await this.applyCodingStylesToFile(settings, textEditor);
+            }
+            catch (e: any) {
+                await this.error(`Error applying Coding Styles: ${e.message}`);
+            }
         });
     }
-    */
 
     private createRenameSymbolsInFileCommand(): VSCodeCommand {
         return new VSCodeCommand("kokoabim.csharpen.rename-symbols-in-file", async () => {
@@ -266,7 +281,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             const settings = CSharpenVSCodeExtensionSettings.shared(true);
             const symbolRenaming = settings.symbolRenaming.filter(sr => !sr.disabled);
             if (symbolRenaming.length === 0) {
-                await this.information("No symbol renaming rules found.");
+                await this.information("No Symbol Renaming rules found.");
                 return;
             }
 
@@ -297,7 +312,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                     }
                 }
                 catch (e: any) {
-                    await this.warning(`Error renaming symbol: ${e.message}`);
+                    await this.warning(`Error applying Symbol Renaming: ${e.message}`);
                 }
             } while (repeat);
 
@@ -822,15 +837,43 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             if (result !== "Continue") return [false, 0, [], false, `Canceled: ${fileFilterReason}`];
         }
 
+        // --- remove unused usings ---
+
         const removedUnusedUsingsCount = settings.removeUnusedUsingsOnSharpen ? await CSharpFile.removeUnusedUsings(textEditor) : 0;
+
+        // --- sharpen ---
+
         if (settings.formatDocumentOnSharpen) await vscode.commands.executeCommand('editor.action.formatDocument', textEditor.document.uri);
 
-        let csharpFile;
-        let repeat = false;
+        let csharpFile: CSharpFile;
+
+        try {
+            csharpFile = await CSharpFile.create(textEditor.document);
+            if (!csharpFile.hasChildren) {
+                if (!batchProcessing) await this.warning("No C# symbols found.");
+                return [false, removedUnusedUsingsCount, [], false, "No C# symbols found"];
+            }
+
+            CSharpOrganizer.organizeFile(settings, csharpFile);
+        }
+        catch (e: any) {
+            if (!batchProcessing) await this.error(e.message);
+            return [false, removedUnusedUsingsCount, [], true, `Error: ${e.message}`];
+        }
+
+        await textEditor.edit(tee => {
+            tee.replace(new vscode.Range(CSharpFile.zeroPosition, textEditor.document.positionAt(textEditor.document.getText().length)), csharpFile.text);
+        });
+
+        if (settings.formatDocumentOnSharpen) await vscode.commands.executeCommand('editor.action.formatDocument', textEditor.document.uri);
+
+        // --- symbol renaming ---
+
+        let repeatSymbolRenaming = false;
         const renamedSymbols: RenamedSymbol[] = [];
 
         do {
-            repeat = false;
+            repeatSymbolRenaming = false;
 
             try {
                 csharpFile = await CSharpFile.create(textEditor.document);
@@ -849,7 +892,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                     const renamedSymbol = await this.applySymbolRenaming(settings, textEditor, csharpFile.children);
                     if (renamedSymbol) {
                         renamedSymbols.push(renamedSymbol);
-                        repeat = true;
+                        repeatSymbolRenaming = true;
                     }
                 }
                 catch (e: any) {
@@ -858,22 +901,11 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                 }
             }
 
-            // if (reCreateCSharpFile && !batchProcessing) this.outputLine(`Re-parsing symbols after symbol renaming.`);
-        } while (repeat); // NOTE: have to re-create the CSharpFile after each renamed symbol because of the symbol position values changing
+        } while (repeatSymbolRenaming); // NOTE: have to re-create the CSharpFile after each renamed symbol because of the symbol position values changing
 
-        try {
-            CSharpOrganizer.organizeFile(settings, csharpFile);
-        }
-        catch (e: any) {
-            if (!batchProcessing) await this.error(e.message);
-            return [false, removedUnusedUsingsCount, renamedSymbols, true, `Error: ${e.message}`];
-        }
+        // --- coding styles ---
 
-        await textEditor.edit(tee => {
-            tee.replace(new vscode.Range(CSharpFile.zeroPosition, textEditor.document.positionAt(textEditor.document.getText().length)), csharpFile.text);
-        });
-
-        if (settings.formatDocumentOnSharpen) await vscode.commands.executeCommand('editor.action.formatDocument', textEditor.document.uri);
+        if (!batchProcessing && settings.codingStylesEnabled && settings.codingStyles.anyEnabled) await this.applyCodingStylesToFile(settings, textEditor);
 
         return [true, removedUnusedUsingsCount, renamedSymbols, false, undefined];
     }

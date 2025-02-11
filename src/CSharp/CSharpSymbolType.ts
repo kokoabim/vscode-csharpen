@@ -68,8 +68,11 @@ export namespace CSharpSymbolType {
             case "enum": return CSharpSymbolType.enum;
             case "event": return CSharpSymbolType.event;
             case "field": return CSharpSymbolType.field;
+            case "indexer": return CSharpSymbolType.indexer;
             case "interface": return CSharpSymbolType.interface;
             case "method": return CSharpSymbolType.method;
+            case "namespace": return CSharpSymbolType.namespace;
+            case "operator": return CSharpSymbolType.operator;
             case "property": return CSharpSymbolType.property;
             case "recordclass": return CSharpSymbolType.recordClass;
             case "recordstruct": return CSharpSymbolType.recordStruct;

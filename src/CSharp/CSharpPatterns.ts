@@ -14,6 +14,7 @@ export class CSharpPatterns {
 
     static readonly closePreprocessorDirectives = new RegExp("^(?<text>[ \\t]*#[ \\t]*(endif|pragma).*?)\\r?\\n", "gm");
     static readonly delegateKeyword = "\\bdelegate\\b";
+    static readonly frameworkTypes = "\\b(((System\\.)?((Boolean)|(S?Byte)|(Char)|(Decimal)|(Double)|(Single)|(U?Int(16|32|64|Ptr))|(Object)|(String)))|(System\\.Int128))\\b"; // NOTE: Int128 must include System. prefix (since there is not actual language type and this pattern is used to convert BCL types to language keyword)
     static readonly implementsRegExp = new RegExp(`\\s*(?<type>${CSharpPatterns.anyType})(\\s*,\\s*)?`, "g");
     static readonly multiLineCommentRegExp = new RegExp("(?<text>/\\*.*?\\*/)", "gs");
     static readonly namespaceDeclarationFileScopedRegExp = new RegExp(`^(?<declaration>(?<signature>[ \\t]*namespace\\s+(?<namespace>${CSharpPatterns.namespace}))\\s*;)`, "gm");

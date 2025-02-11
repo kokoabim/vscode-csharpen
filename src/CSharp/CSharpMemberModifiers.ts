@@ -16,8 +16,8 @@ export enum CSharpMemberModifiers {
 }
 
 export namespace CSharpMemberModifiers {
-    export function flagExists(modifiers: CSharpMemberModifiers, flag: CSharpMemberModifiers): boolean {
-        return (modifiers & flag) === flag;
+    export function hasFlag(value: CSharpMemberModifiers, flag: CSharpMemberModifiers): boolean {
+        return (value & flag) === flag;
     }
 
     export function fromString(memberModifiers: string): CSharpMemberModifiers {
