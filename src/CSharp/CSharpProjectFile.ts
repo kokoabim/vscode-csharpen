@@ -1,24 +1,27 @@
 import * as vscode from "vscode";
 import * as fs from "fs/promises";
-import { glob } from 'glob';
-import { basename, dirname } from 'path';
+
+import { glob } from "glob";
+import { basename, dirname } from "path";
 import { Executor } from "../Utils/Executor";
+import { CSharpProjectPackageReference } from "./CSharpProjectPackageReference";
+import { CSharpProjectProjectReference } from "./CSharpProjectProjectReference";
 
 export class CSharpProjectFile {
-    assemblyName!: string;
-    defaultNamespace!: string;
-    directory: string;
-    isTestProject = false;
-    name: string;
-    packageReferences: CSharpProjectPackageReference[] = [];
-    projectReferences: CSharpProjectProjectReference[] = [];
-    removedPackageReferences: CSharpProjectPackageReference[] = [];
-    removedProjectReferences: CSharpProjectProjectReference[] = [];
-    solutionFilePath: string | undefined;
-    targetFramework: string | undefined;
-    workspaceFolder: string | undefined;
-
     private fileContents: string | undefined;
+
+    public assemblyName!: string;
+    public defaultNamespace!: string;
+    public directory: string;
+    public isTestProject = false;
+    public name: string;
+    public packageReferences: CSharpProjectPackageReference[] = [];
+    public projectReferences: CSharpProjectProjectReference[] = [];
+    public removedPackageReferences: CSharpProjectPackageReference[] = [];
+    public removedProjectReferences: CSharpProjectProjectReference[] = [];
+    public solutionFilePath: string | undefined;
+    public targetFramework: string | undefined;
+    public workspaceFolder: string | undefined;
 
     constructor(public filePath: string, public relativePath: string) {
         this.directory = dirname(filePath);
@@ -26,11 +29,11 @@ export class CSharpProjectFile {
         this.relativePath = relativePath;
     }
 
-    static async findProjectsAsync(workspaceFolder: vscode.WorkspaceFolder): Promise<CSharpProjectFile[]> {
+    public static async findProjectsAsync(workspaceFolder: vscode.WorkspaceFolder): Promise<CSharpProjectFile[]> {
         return await CSharpProjectFile.findProjectsUnderDirectoryAsync(workspaceFolder.uri.fsPath, true);
     }
 
-    static async findProjectsUnderDirectoryAsync(directory: string, isWorkspaceFolder = false): Promise<CSharpProjectFile[]> {
+    public static async findProjectsUnderDirectoryAsync(directory: string, isWorkspaceFolder = false): Promise<CSharpProjectFile[]> {
         return await glob(directory + '/**/*.csproj').then(async files => {
             const cSharpProjectFiles = files.map(f => {
                 const projectFile = new CSharpProjectFile(f, f.replace(directory + "/", ""));
@@ -44,13 +47,12 @@ export class CSharpProjectFile {
         });
     }
 
-    static projectOfTextDocument(projects: CSharpProjectFile[], textDocument: vscode.TextDocument): CSharpProjectFile | undefined {
+    public static projectOfTextDocument(projects: CSharpProjectFile[], textDocument: vscode.TextDocument): CSharpProjectFile | undefined {
         return projects.find(p => textDocument.uri.path.includes(p.directory + "/"));
     }
 
-    async buildAsync(outputChannel: vscode.OutputChannel, prefix = "", showFilePath = true): Promise<boolean> {
+    public async buildAsync(outputChannel: vscode.OutputChannel, prefix = "", showFilePath = true): Promise<boolean> {
         outputChannel.append(`${prefix}${showFilePath ? `[Project: ${this.name}] ` : ""}Building project...`);
-
 
         // eslint-disable-next-line no-unused-vars
         const [dotNetBuildExitCode, dotNetBuildOutput] = await Executor.execToString(`dotnet build -v m "${this.filePath}"`, this.directory);
@@ -64,7 +66,7 @@ export class CSharpProjectFile {
         }
     }
 
-    async buildSolutionAsync(outputChannel: vscode.OutputChannel, prefix = "", showFilePath = true): Promise<boolean> {
+    public async buildSolutionAsync(outputChannel: vscode.OutputChannel, prefix = "", showFilePath = true): Promise<boolean> {
         if (!this.solutionFilePath) {
             outputChannel.appendLine(`${prefix}No solution file found`);
             return false;
@@ -84,25 +86,11 @@ export class CSharpProjectFile {
         }
     }
 
-    private async getSolutionFilePath(): Promise<string | undefined> {
-        if (!this.workspaceFolder) return undefined;
-
-        const solutionFilePaths = await glob(this.workspaceFolder + '/*.sln');
-        if (solutionFilePaths.length === 0) return undefined;
-
-        for await (const solutionFilePath of solutionFilePaths) {
-            const solutionContents = await CSharpProjectFile.readFileAsStringAsync(solutionFilePath);
-            if (solutionContents.includes("\"" + this.relativePath.replace(/\//g, "\\") + "\"")) return solutionFilePath;
-        }
-
-        return undefined;
-    }
-
-    async getCSharpFileUris(): Promise<vscode.Uri[]> {
+    public async getCSharpFileUris(): Promise<vscode.Uri[]> {
         return await this.getFileUrisByExtension("cs");
     }
 
-    async getFileUrisByExtension(extension: string): Promise<vscode.Uri[]> {
+    public async getFileUrisByExtension(extension: string): Promise<vscode.Uri[]> {
         return (await vscode.workspace.findFiles(`**/*.${extension}`)).filter(f =>
             f.path.includes(this.directory + "/")
             && !f.path.includes("/bin/Debug/")
@@ -112,11 +100,11 @@ export class CSharpProjectFile {
         );
     }
 
-    getProperty(name: string): string | undefined {
+    public getProperty(name: string): string | undefined {
         return this.fileContents?.match(new RegExp(`<${name}>(.*)</${name}>`, "i"))?.[1];
     }
 
-    async removePackageReferenceAsync(outputChannel: vscode.OutputChannel, reference: CSharpProjectPackageReference): Promise<boolean> {
+    public async removePackageReferenceAsync(outputChannel: vscode.OutputChannel, reference: CSharpProjectPackageReference): Promise<boolean> {
         outputChannel.append(`\n[Project: ${this.name}, Package: ${reference.name}] Removing package reference...`);
 
         if (this.packageReferences.find(r => r.name === reference.name) === undefined) {
@@ -154,7 +142,7 @@ export class CSharpProjectFile {
         return false;
     }
 
-    // TODO: resolve issue with removing project references
+    // ? TODO: resolve issue with removing project references
     /*async removeProjectReferenceAsync(outputChannel: vscode.OutputChannel, reference: CSharpProjectProjectReference): Promise<boolean> {
         outputChannel.append(`\n[Project: ${this.name}, Project: ${reference.name}] Removing project reference...`);
 
@@ -203,6 +191,20 @@ export class CSharpProjectFile {
         });
     }
 
+    private async getSolutionFilePath(): Promise<string | undefined> {
+        if (!this.workspaceFolder) return undefined;
+
+        const solutionFilePaths = await glob(this.workspaceFolder + '/*.sln');
+        if (solutionFilePaths.length === 0) return undefined;
+
+        for await (const solutionFilePath of solutionFilePaths) {
+            const solutionContents = await CSharpProjectFile.readFileAsStringAsync(solutionFilePath);
+            if (solutionContents.includes("\"" + this.relativePath.replace(/\//g, "\\") + "\"")) return solutionFilePath;
+        }
+
+        return undefined;
+    }
+
     private async readFilePropertiesAsync(): Promise<void> {
         await CSharpProjectFile.readFileAsStringAsync(this.filePath).then(contents => {
             this.fileContents = contents;
@@ -236,21 +238,5 @@ export class CSharpProjectFile {
             }
             if (this.projectReferences.length > 0) this.projectReferences = this.projectReferences.sort((a, b) => a.path.localeCompare(b.path));
         }
-    }
-}
-
-export class CSharpProjectPackageReference {
-    static readonly regExp = /(^[ \t]*)?<PackageReference\s+Include="(?<name>[^"]*)"\s+Version="(?<version>[^"]*)"([^>]*?\/>|.*<\/PackageReference>)([ \t]*$)?/gs;
-
-    constructor(public readonly match: string, public readonly name: string, public readonly version: string) { }
-}
-
-export class CSharpProjectProjectReference {
-    static readonly regExp = /(^[ \t]*)?<ProjectReference\s+Include="(?<path>[^"]*)"([^>]*?\/>|.*<\/ProjectReference>)([ \t]*$)?/gs;
-
-    readonly name: string;
-
-    constructor(public readonly match: string, public readonly path: string) {
-        this.name = basename(path, ".csproj");
     }
 }

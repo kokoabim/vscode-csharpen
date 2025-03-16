@@ -1,10 +1,8 @@
 import * as vscode from "vscode";
-import { VSCodeCommand } from "./VSCodeCommand";
-import { MessageResult } from "../Models/MessageResult";
 
-/**
- * VS Code extension
- */
+import { MessageResult } from "../Models/MessageResult";
+import { VSCodeCommand } from "./VSCodeCommand";
+
 export abstract class VSCodeExtension {
     protected context: vscode.ExtensionContext;
     protected fullName: string;
@@ -60,17 +58,6 @@ export abstract class VSCodeExtension {
         return textEditor;
     }
 
-    protected async showMessage(messageResult: MessageResult): Promise<boolean> {
-        if (!messageResult.message) return false;
-
-        if (messageResult.level === vscode.LogLevel.Info) await this.information(messageResult.message);
-        else if (messageResult.level === vscode.LogLevel.Error) await this.error(messageResult.message);
-        else if (messageResult.level === vscode.LogLevel.Warning) await this.warning(messageResult.message);
-        else return false;
-
-        return true;
-    }
-
     protected async information(message: string, noPrefix = false): Promise<void> {
         await vscode.window.showInformationMessage(`${noPrefix ? "" : `${this.shortName}: `}${message}`);
     }
@@ -98,6 +85,17 @@ export abstract class VSCodeExtension {
 
     protected packageJsonRootValue(name: string): any {
         return this.context.extension.packageJSON[name];
+    }
+
+    protected async showMessage(messageResult: MessageResult): Promise<boolean> {
+        if (!messageResult.message) return false;
+
+        if (messageResult.level === vscode.LogLevel.Info) await this.information(messageResult.message);
+        else if (messageResult.level === vscode.LogLevel.Error) await this.error(messageResult.message);
+        else if (messageResult.level === vscode.LogLevel.Warning) await this.warning(messageResult.message);
+        else return false;
+
+        return true;
     }
 
     protected showOutput(preserveFocus = true): void {

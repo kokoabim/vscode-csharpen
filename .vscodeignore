@@ -12,7 +12,6 @@
 dist/test/
 docs/
 eslint.config.mjs
-media/
 releases/
 src/
 tsconfig.json

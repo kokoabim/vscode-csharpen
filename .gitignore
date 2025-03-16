@@ -6,5 +6,3 @@
 dist/
 node_modules/
 releases/
-tests/**/bin/
-tests/**/obj/

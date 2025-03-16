@@ -2,13 +2,14 @@ import { CSharpSymbol } from "../CSharp/CSharpSymbol";
 import { SymbolMatcher, SymbolMatcherPattern } from "./SymbolMatcher";
 
 export class SymbolRename extends SymbolMatcherPattern {
-    readonly disabled = false;
-    readonly name!: string;
-    readonly details?: string;
-    readonly replacement!: string;
+    private static readonly nameRegex = /\{name(:(?<indexes>[^:}]+))?(:(?<func>[^:}]+))?\}/g;
 
     private readonly matcher: SymbolMatcher;
-    private static readonly nameRegex = /\{name(:(?<indexes>[^:}]+))?(:(?<func>[^:}]+))?\}/g;
+
+    public readonly details?: string;
+    public readonly disabled = false;
+    public readonly name!: string;
+    public readonly replacement!: string;
 
     constructor(init: Partial<SymbolRename>) {
         super(init);
@@ -17,7 +18,7 @@ export class SymbolRename extends SymbolMatcherPattern {
         this.matcher = new SymbolMatcher(this);
     }
 
-    process(symbol: CSharpSymbol): string | undefined {
+    public process(symbol: CSharpSymbol): string | undefined {
         if (this.disabled) return;
 
         const match = this.matcher.process(symbol);
@@ -38,7 +39,7 @@ export class SymbolRename extends SymbolMatcherPattern {
 
             let name = indexes ? symbolNameMatch.substring(indexes[0], indexes[1] ?? symbolNameMatch.length) : symbolNameMatch;
 
-            // TODO: add new functions here
+            // NOTE: add new functions here
             if (func === "lower") name = name.toLocaleLowerCase();
             else if (func === "upper") name = name.toLocaleUpperCase();
 

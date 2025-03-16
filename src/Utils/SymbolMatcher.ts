@@ -3,37 +3,36 @@ import { CSharpMemberModifiers } from "../CSharp/CSharpMemberModifiers";
 import { CSharpSymbol } from "../CSharp/CSharpSymbol";
 import { CSharpSymbolType } from "../CSharp/CSharpSymbolType";
 
-export class SymbolMatcherPattern {
-    accessModifiers?: string;
-    accessModifierComparison? = true;
+export enum SymbolPropertyMatched {
+    none = 0,
+    symbolType = 1 << 0,
+    name = 1 << 1,
+    returnType = 1 << 2,
+    accessModifiers = 1 << 3,
+    memberModifiers = 1 << 4,
+}
 
-    memberModifiers?: string;
-    memberModifiersComparison? = true;
+export class SymbolMatch {
+    public data: { [key: string]: any } = {};
+    public isMatched = false;
+    public propertiesMatched: SymbolPropertyMatched = SymbolPropertyMatched.none;
 
-    namePattern?: string;
-
-    // TODO: need?: matchEitherNameOrReturnType?: boolean;
-    // TODO: need?: nameTypePattern?: string;
-    returnTypePattern?: string;
-
-    types?: string;
-    typesComparison? = true;
-
-    constructor(init: Partial<SymbolMatcherPattern>) {
-        Object.assign(this, init);
-    }
+    constructor(public symbol: CSharpSymbol) { }
 }
 
 export class SymbolMatcher {
-    accessModifiers: CSharpAccessModifier[] = [];
-    memberModifiers: CSharpMemberModifiers = CSharpMemberModifiers.none;
-    types: CSharpSymbolType[] = [];
+    public accessModifiers: CSharpAccessModifier[] = [];
+    public memberModifiers: CSharpMemberModifiers = CSharpMemberModifiers.none;
+    public types: CSharpSymbolType[] = [];
 
     constructor(private pattern: SymbolMatcherPattern) {
         if (pattern.accessModifiers) {
             if (pattern.accessModifiers.startsWith("!:")) {
                 pattern.accessModifierComparison = false;
                 pattern.accessModifiers = pattern.accessModifiers.substring(2);
+            }
+            else {
+                pattern.accessModifierComparison = true;
             }
 
             this.accessModifiers = CSharpAccessModifier.fromDelimitedString(pattern.accessModifiers);
@@ -44,6 +43,9 @@ export class SymbolMatcher {
                 pattern.memberModifiersComparison = false;
                 pattern.memberModifiers = pattern.memberModifiers.substring(2);
             }
+            else {
+                pattern.memberModifiersComparison = true;
+            }
 
             this.memberModifiers = CSharpMemberModifiers.fromDelimitedString(pattern.memberModifiers);
         }
@@ -53,16 +55,19 @@ export class SymbolMatcher {
                 pattern.typesComparison = false;
                 pattern.types = pattern.types.substring(2);
             }
+            else {
+                pattern.typesComparison = true;
+            }
 
             this.types = CSharpSymbolType.fromDelimitedString(pattern.types);
         }
     }
 
-    filter(symbols: CSharpSymbol[]): SymbolMatch[] {
+    public filter(symbols: CSharpSymbol[]): SymbolMatch[] {
         return symbols.map(symbol => this.process(symbol)).filter(sm => sm.isMatched);
     }
 
-    process(symbol: CSharpSymbol): SymbolMatch {
+    public process(symbol: CSharpSymbol): SymbolMatch {
         const match = new SymbolMatch(symbol);
 
         if (this.types.length > 0) {
@@ -82,17 +87,9 @@ export class SymbolMatcher {
 
         if (this.pattern.returnTypePattern) {
             const matchedReturnTypePattern = (symbol.returnType ?? "").match(this.pattern.returnTypePattern) !== null;
-            if (!matchedReturnTypePattern /* && !this.pattern.matchEitherNameOrReturnType */) return match;
-
-            if (matchedReturnTypePattern) match.propertiesMatched |= SymbolPropertyMatched.returnType;
+            if (!matchedReturnTypePattern) return match;
+            match.propertiesMatched |= SymbolPropertyMatched.returnType;
         }
-
-        // TODO: need?
-        /*if (this.pattern.nameTypePattern) {
-            const matchedNameTypePattern = (symbol.nameTypeHasGenerics ? symbol.name ?? "" : "").match(this.pattern.nameTypePattern) !== null;
-            if (!matchedNameTypePattern) return match;
-            match.propertiesMatched |= SymbolPropertyMatched.nameType;
-        }*/
 
         if (this.pattern.namePattern) {
             const symbolName = symbol.name.match(this.pattern.namePattern)?.groups?.name;
@@ -107,22 +104,19 @@ export class SymbolMatcher {
     }
 }
 
-export class SymbolMatch {
-    data: { [key: string]: any } = {};
-    isMatched = false;
-    propertiesMatched: SymbolPropertyMatched = SymbolPropertyMatched.none;
+export class SymbolMatcherPattern {
+    public accessModifierComparison? = true;
+    public accessModifiers?: string;
+    public memberModifiers?: string;
+    public memberModifiersComparison? = true;
+    public namePattern?: string;
+    public returnTypePattern?: string;
+    public types?: string;
+    public typesComparison? = true;
 
-    constructor(public symbol: CSharpSymbol) { }
-}
-
-export enum SymbolPropertyMatched {
-    none = 0,
-    symbolType = 1 << 0,
-    name = 1 << 1,
-    returnType = 1 << 2,
-    accessModifiers = 1 << 3,
-    memberModifiers = 1 << 4,
-    // TODO: need?: nameType = 1 << 5,
+    constructor(init: Partial<SymbolMatcherPattern>) {
+        Object.assign(this, init);
+    }
 }
 
 export namespace SymbolPropertyMatched {

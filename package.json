@@ -1,7 +1,7 @@
 {
     "name": "csharpen",
     "publisher": "spencerjames",
-    "version": "0.5.3",
+    "version": "0.5.4",
     "description": "Sharpen (organize) C# files by ordering, sorting and regionalizing symbols.",
     "displayName": "CSharpen — C# File Organizer",
     "shortName": "CSharpen",
@@ -18,8 +18,8 @@
         "type": "git",
         "url": "https://github.com/kokoabim/vscode-csharpen"
     },
-    "license": "SEE LICENSE IN LICENSE.md",
-    "icon": "./dist/media/csharp-128px.png",
+    "license": "LICENSE.md",
+    "icon": "./images/extension-512.png",
     "engines": {
         "vscode": "^1.96.0"
     },
@@ -32,9 +32,17 @@
         "organize",
         "sort",
         "format",
-        "csharp"
+        "csharp",
+        "code",
+        "style",
+        "class",
+        "interface",
+        "properties"
     ],
-    "activationEvents": [],
+    "activationEvents": [
+        "onLanguage:csharp",
+        "workspaceContains:**/*.cs"
+    ],
     "main": "./dist/extension.js",
     "contributes": {
         "commands": [
@@ -129,6 +137,14 @@
                 "command": "kokoabim.csharpen.sharpen-file",
                 "key": "shift+alt+cmd+f",
                 "when": "editorTextFocus && (editorLangId == csharp || resourceLangId == csharp)"
+            }
+        ],
+        "languages": [
+            {
+                "id": "csharp",
+                "extensions": [
+                    ".cs"
+                ]
             }
         ],
         "configuration": {
@@ -833,19 +849,31 @@
                     "markdownDescription": "Coding Styles.",
                     "type": "object",
                     "properties": {
+                        "convertNonPrivateFieldsToProperties": {
+                            "type": "boolean",
+                            "markdownDescription": "Convert non-private fields to properties with accessors. Preserves value assignments (if any).",
+                            "default": true
+                        },
                         "useLanguageKeywordsInsteadOfFrameworkTypes": {
                             "type": "boolean",
-                            "markdownDescription": "Use language keywords instead of BCL/Framework types.",
+                            "markdownDescription": "Change BCL/Framework types to language keywords on return and member types.",
                             "default": true
                         }
                     }
+                },
+                "csharpen.delayBeforeDetectingFileDiagnostics": {
+                    "order": 19,
+                    "markdownDescription": "Delay (in milliseconds) before detecting file diagnostics.",
+                    "type": "integer",
+                    "default": 300
                 }
             }
         }
     },
     "scripts": {
+        "build": "npm install && tsc -p ./",
         "clean": "./clean.sh -y",
-        "compile": "tsc -p ./ && copyfiles ./media/csharp-128px.png ./dist/",
+        "compile": "tsc -p ./",
         "lint": "eslint src",
         "pretest": "npm install && npm run compile && npm run lint",
         "rebuild": "./clean.sh -iy && npm run compile",
@@ -854,14 +882,14 @@
         "watch": "tsc -watch -p ./"
     },
     "devDependencies": {
-        "@types/node": "^22.13.1",
+        "@types/node": "^22.13.10",
         "@types/vscode": "^1.96.0",
-        "@typescript-eslint/eslint-plugin": "^8.23.0",
-        "@typescript-eslint/parser": "^8.23.0",
+        "@typescript-eslint/eslint-plugin": "^8.26.1",
+        "@typescript-eslint/parser": "^8.26.1",
         "@vscode/test-cli": "^0.0.10",
         "@vscode/test-electron": "^2.4.1",
-        "eslint": "^9.20.0",
-        "typescript": "^5.7.3"
+        "eslint": "^9.22.0",
+        "typescript": "^5.8.2"
     },
     "dependencies": {
         "glob": "^11.0.1"

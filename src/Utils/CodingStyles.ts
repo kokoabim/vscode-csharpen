@@ -1,30 +1,30 @@
 import * as vscode from "vscode";
 
-import { CSharpSymbol } from "../CSharp/CSharpSymbol";
-import { SymbolMatcher, SymbolPropertyMatched } from "./SymbolMatcher";
 import { CSharpFile } from "../CSharp/CSharpFile";
-import { CSharpType } from "../CSharp/CSharpType";
-import { ObjectResult } from "../Models/MessageResult";
-import { AppliedCodingStyle } from "../Models/AppliedCodingStyle";
 import { CSharpPatterns } from "../CSharp/CSharpPatterns";
+import { CSharpSymbol } from "../CSharp/CSharpSymbol";
+import { CSharpType } from "../CSharp/CSharpType";
+import { AppliedCodingStyle } from "../Models/AppliedCodingStyle";
+import { ObjectResult } from "../Models/MessageResult";
+import { SymbolMatcher, SymbolPropertyMatched } from "./SymbolMatcher";
 
 export class CodingStyles {
-    readonly convertNonPrivateFieldsToProperties = false; // ! TODO: to true once implemented
-    readonly useLanguageKeywordsInsteadOfFrameworkTypes = true;
+    public static readonly convertNonPrivateFieldsToPropertiesName = "ConvertNonPrivateFieldsToProperties";
+    public static readonly useLanguageKeywordsInsteadOfFrameworkTypesName = "UseLanguageKeywordsInsteadOfFrameworkTypes";
 
-    static readonly convertNonPrivateFieldsToPropertiesName = "ConvertNonPrivateFieldsToProperties";
-    static readonly useLanguageKeywordsInsteadOfFrameworkTypesName = "UseLanguageKeywordsInsteadOfFrameworkTypes";
-
-    get anyEnabled(): boolean {
-        return this.convertNonPrivateFieldsToProperties
-            || this.useLanguageKeywordsInsteadOfFrameworkTypes;
-    }
+    public convertNonPrivateFieldsToProperties = true;
+    public useLanguageKeywordsInsteadOfFrameworkTypes = true;
 
     constructor(init: Partial<CodingStyles>) {
         Object.assign(this, init);
     }
 
-    async processFile(textEditor: vscode.TextEditor): Promise<ObjectResult<AppliedCodingStyle[]>> {
+    public get anyEnabled(): boolean {
+        return this.convertNonPrivateFieldsToProperties
+            || this.useLanguageKeywordsInsteadOfFrameworkTypes;
+    }
+
+    public async processFile(textEditor: vscode.TextEditor): Promise<ObjectResult<AppliedCodingStyle[]>> {
         const appliedCodingStyles: AppliedCodingStyle[] = [];
 
         do {
@@ -46,55 +46,45 @@ export class CodingStyles {
     private async processSymbols(textEditor: vscode.TextEditor, symbols: CSharpSymbol[]): Promise<ObjectResult<AppliedCodingStyle | undefined>> {
         if (symbols.length === 0) return ObjectResult.ok(undefined, "No C# symbols to process.");
 
-        // ! TODO: implement this
-        /*if (this.convertNonPrivateFieldsToProperties) {
+        if (this.convertNonPrivateFieldsToProperties) {
             const convertNonPrivateFieldsToPropertiesSymbolMatcher = new SymbolMatcher({
                 types: "field",
-                accessModifiers: "!:private protected,private"
-                // ! TODO: account for readonly memberModifier (no set accessor)
+                accessModifiers: "!:private protected,private",
+                memberModifiers: "!:readonly",
             });
 
             const symbolMatches = convertNonPrivateFieldsToPropertiesSymbolMatcher.filter(symbols);
             for (const symbolMatch of symbolMatches) {
+
                 console.log(`[${CodingStyles.convertNonPrivateFieldsToPropertiesName}]: ${symbolMatch.symbol.name}`);
 
-                // ! TODO: apply coding style and return
+                let editSucceeded = false;
+                const accessorsWithAssignment = `${(symbolMatch.symbol.assignment ? "" : " ")}{ get; set; }${(symbolMatch.symbol.assignment ? " " + symbolMatch.symbol.assignment : "")}`;
+                const replacePositionOrRange = symbolMatch.symbol.assignmentRange ?? new vscode.Range(symbolMatch.symbol.nameRange!.end, symbolMatch.symbol.range!.end);
+
+                if (await textEditor.edit(editBuilder => {
+                    editBuilder.replace(replacePositionOrRange, accessorsWithAssignment);
+                })) {
+                    editSucceeded = true;
+                }
+
+                return editSucceeded
+                    ? ObjectResult.ok(new AppliedCodingStyle(CodingStyles.convertNonPrivateFieldsToPropertiesName, symbolMatch.symbol, "field to property"))
+                    : ObjectResult.error(`Failed to apply coding style ${CodingStyles.convertNonPrivateFieldsToPropertiesName} to ${symbolMatch.symbol.memberName}: text editor did not perform edit`);
             }
-        }*/
+        }
 
         if (this.useLanguageKeywordsInsteadOfFrameworkTypes) {
             const useLanguageKeywordsInsteadOfFrameworkTypesSymbolMatcher = new SymbolMatcher({
-                // TODO: need?: matchEitherNameOrReturnType: true,
-                // TODO: need?: nameTypePattern: CSharpPatterns.frameworkTypes,
                 returnTypePattern: CSharpPatterns.frameworkTypes,
                 types: "!:namespace"
             });
 
             const symbolMatches = useLanguageKeywordsInsteadOfFrameworkTypesSymbolMatcher.filter(symbols);
             for await (const symbolMatch of symbolMatches) {
-
                 let editAttempted = false;
                 let editSucceeded = false;
                 let appliedCodingStyleMessage = "";
-
-                // TODO: need?
-                /*if (SymbolPropertyMatched.hasFlag(symbolMatch.propertiesMatched, SymbolPropertyMatched.nameType)) {
-                    if (!symbolMatch.symbol.nameRange) {
-                        return ObjectResult.error(`Failed to apply coding style ${CodingStyles.useLanguageKeywordsInsteadOfFrameworkTypesName} to ${symbolMatch.symbol.memberName}: symbol name range is missing`);
-                    }
-
-                    const newNameType = CSharpType.replaceFrameworkTypesToLanguageKeywords(symbolMatch.symbol.name);
-
-                    if (newNameType !== symbolMatch.symbol.name) {
-                        editAttempted = true;
-                        if (await textEditor.edit(editBuilder => {
-                            editBuilder.replace(symbolMatch.symbol.nameRange!, newNameType!);
-                        })) {
-                            editSucceeded = true;
-                            appliedCodingStyleMessage += `, name generic parameters: ${symbolMatch.symbol.name} -> ${newNameType}`;
-                        }
-                    }
-                }*/
 
                 if (SymbolPropertyMatched.hasFlag(symbolMatch.propertiesMatched, SymbolPropertyMatched.returnType)) {
                     if (!symbolMatch.symbol.returnTypeRange) {
@@ -109,7 +99,7 @@ export class CodingStyles {
                             editBuilder.replace(symbolMatch.symbol.returnTypeRange!, newReturnType!);
                         })) {
                             editSucceeded = true;
-                            appliedCodingStyleMessage += `, return type: ${symbolMatch.symbol.returnType} -> ${newReturnType}`;
+                            appliedCodingStyleMessage += `return type: ${symbolMatch.symbol.returnType} -> ${newReturnType}`;
                         }
                     }
                 }
@@ -117,7 +107,7 @@ export class CodingStyles {
                 if (!editAttempted) continue; // NOTE: no change needed (this actually shouldn't happen)
 
                 return editSucceeded
-                    ? ObjectResult.ok(new AppliedCodingStyle(CodingStyles.useLanguageKeywordsInsteadOfFrameworkTypesName, symbolMatch.symbol, appliedCodingStyleMessage.substring(2)))
+                    ? ObjectResult.ok(new AppliedCodingStyle(CodingStyles.useLanguageKeywordsInsteadOfFrameworkTypesName, symbolMatch.symbol, appliedCodingStyleMessage))
                     : ObjectResult.error(`Failed to apply coding style ${CodingStyles.useLanguageKeywordsInsteadOfFrameworkTypesName} to ${symbolMatch.symbol.memberName}: text editor did not perform edit`);
             }
         }
@@ -132,4 +122,3 @@ export class CodingStyles {
         return ObjectResult.ok();
     }
 }
-

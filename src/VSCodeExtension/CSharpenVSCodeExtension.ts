@@ -1,24 +1,30 @@
-import * as vscode from "vscode";
-
-import { CSharpFile } from "../CSharp/CSharpFile";
-import { CSharpOrganizer } from "../CSharp/CSharpOrganizer";
-import { CSharpProjectFile, CSharpProjectPackageReference } from "../CSharp/CSharpProjectFile";
-import { CSharpSymbol } from "../CSharp/CSharpSymbol";
-import { CSharpenVSCodeExtensionSettings } from "./CSharpenVSCodeExtensionSettings";
-import { CSharpenWorkspaceSettings } from "./CSharpenWorkspaceSettings";
-import { FileDiagnostic, FileDiagnosticSeverity } from "../Models/FileDiagnostic";
-import { FileFilter, FileFilterStatus } from "../Models/FileFilter";
-import { FileSystem } from "../Utils/FileSystem";
-import { VSCodeCommand } from "./VSCodeCommand";
-import { VSCodeExtension } from "./VSCodeExtension";
-import { ObjectResult } from "../Models/MessageResult";
-import { AppliedCodingStyle } from "../Models/AppliedCodingStyle";
-import { CSharpSymbolType } from "../CSharp/CSharpSymbolType";
-import { CSharpAccessModifier } from "../CSharp/CSharpAccessModifier";
-
 /**
  * CSharpen — C# File Organizer VS Code extension
+ * by Spencer James — https://swsj.me
  */
+
+import * as vscode from "vscode";
+
+import { CSharpAccessModifier } from "../CSharp/CSharpAccessModifier";
+import { CSharpFile } from "../CSharp/CSharpFile";
+import { CSharpOrganizer } from "../CSharp/CSharpOrganizer";
+import { CSharpProjectFile } from "../CSharp/CSharpProjectFile";
+import { CSharpProjectPackageReference } from "../CSharp/CSharpProjectPackageReference";
+import { CSharpSymbol } from "../CSharp/CSharpSymbol";
+import { CSharpSymbolType } from "../CSharp/CSharpSymbolType";
+import { AppliedCodingStyle } from "../Models/AppliedCodingStyle";
+import { FileDiagnostic, FileDiagnosticSeverity } from "../Models/FileDiagnostic";
+import { FileFilter, FileFilterStatus } from "../Models/FileFilter";
+import { ObjectResult } from "../Models/MessageResult";
+import { FileSystem } from "../Utils/FileSystem";
+import { CSharpenVSCodeExtensionSettings } from "./CSharpenVSCodeExtensionSettings";
+import { CSharpenWorkspaceSettings } from "./CSharpenWorkspaceSettings";
+import { VSCodeCommand } from "./VSCodeCommand";
+import { VSCodeExtension } from "./VSCodeExtension";
+import { RenamedSymbol } from "../Models/RenamedSymbol";
+import { TextDocumentCodeActions } from "../Models/TextDocumentCodeActions";
+import { DocumentSymbolCodeActions } from "../Models/DocumentSymbolCodeActions";
+
 export class CSharpenVSCodeExtension extends VSCodeExtension {
     constructor(context: vscode.ExtensionContext) {
         super(context);
@@ -36,7 +42,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         );
     }
 
-    static use(context: vscode.ExtensionContext): CSharpenVSCodeExtension {
+    public static use(context: vscode.ExtensionContext): CSharpenVSCodeExtension {
         return new CSharpenVSCodeExtension(context);
     }
 
@@ -89,6 +95,28 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         }
 
         return;
+    }
+
+    private createApplyCodingStyleToFileCommand(): VSCodeCommand {
+        return new VSCodeCommand("kokoabim.csharpen.apply-coding-styles-to-file", async () => {
+            if (!super.isWorkspaceReady()) return;
+
+            const textEditor = await this.getTextEditor();
+            if (!textEditor) return;
+
+            const settings = CSharpenVSCodeExtensionSettings.shared(true);
+            if (!settings.codingStyles.anyEnabled) {
+                await this.information("No Coding Styles enabled.");
+                return;
+            }
+
+            try {
+                await this.applyCodingStylesToFile(settings, textEditor);
+            }
+            catch (e: any) {
+                await this.error(`Error applying Coding Styles: ${e.message}`);
+            }
+        });
     }
 
     private createCreateWorkspaceSettingsFileCommand(): VSCodeCommand {
@@ -172,6 +200,8 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
             const workspaceFiles = await vscode.workspace.findFiles("**/*.cs");
 
+            const settings = CSharpenVSCodeExtensionSettings.shared(true);
+
             this.clearOutput();
             this.showOutput();
 
@@ -187,7 +217,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                     const textEditor = await vscode.window.showTextDocument(textDocument);
                 }
 
-                // TODO: add delay before detecting file diagnostics
+                await new Promise(f => setTimeout(f, settings.delayBeforeRemovingUnusedUsingDirectives));
 
                 const fileDiagnosticsForProjectFiles = fileUris.flatMap(f => CSharpFile.getFileDiagnosticsUsingUri(f));
                 if (fileDiagnosticsForProjectFiles.length === 0) continue;
@@ -246,28 +276,6 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
             if (removedCount) await this.information(`Removed ${removedCount} unused using directives.`);
             else await this.information("No unused using directives found.");
-        });
-    }
-
-    private createApplyCodingStyleToFileCommand(): VSCodeCommand {
-        return new VSCodeCommand("kokoabim.csharpen.apply-coding-styles-to-file", async () => {
-            if (!super.isWorkspaceReady()) return;
-
-            const textEditor = await this.getTextEditor();
-            if (!textEditor) return;
-
-            const settings = CSharpenVSCodeExtensionSettings.shared(true);
-            if (!settings.codingStyles.anyEnabled) {
-                await this.information("No Coding Styles enabled.");
-                return;
-            }
-
-            try {
-                await this.applyCodingStylesToFile(settings, textEditor);
-            }
-            catch (e: any) {
-                await this.error(`Error applying Coding Styles: ${e.message}`);
-            }
         });
     }
 
@@ -510,7 +518,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
             let projectFilesTotalCount = 0;
             let removedPackageReferencesTotalCount = 0;
-            // TODO: see below TODO: let removedProjectReferencesTotalCount = 0;
+            // ? TODO: see below TODO: let removedProjectReferencesTotalCount = 0;
             let removedUnusedUsingsTotalCount = 0;
             let abortingOrDidCancel = false;
 
@@ -571,7 +579,6 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                         if (await isAutoGeneratedFileAndContinue(textDocument)) continue; // fileUri for-loop
 
                         const textEditor = await vscode.window.showTextDocument(textDocument);
-
 
                         await new Promise(f => setTimeout(f, settings.delayBeforeRemovingUnusedUsingDirectives));
 
@@ -635,7 +642,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                     this.outputLine(` done`);
                 }
 
-                if (projectFileUris.length > 0 || project.packageReferences.length > 0) { // TODO: see below TODO: || project.projectReferences.length > 0) {
+                if (projectFileUris.length > 0 || project.packageReferences.length > 0) { // ? TODO: see below TODO: || project.projectReferences.length > 0) {
                     let didBuildSolution = await projects[0].buildSolutionAsync(this.outputChannel, " - ", false);
                     if (!didBuildSolution) {
                         if (!await askToContinueOnWarning(`Solution build failed. You may address the failure now then continue.`, async () => {
@@ -739,7 +746,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                     }
                 }
 
-                // TODO: resolve issue with removing project references
+                // ? TODO: resolve issue with removing project references
                 /*if (project.projectReferences.length > 0) {
                     for await (const projectReference of project.projectReferences) {
                         await project.removeProjectReferenceAsync(this.outputChannel, projectReference);
@@ -753,7 +760,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                     }
                 }*/
 
-                if (project.removedPackageReferences.length > 0) { // TODO: see above TODO: || project.removedProjectReferences.length > 0) {
+                if (project.removedPackageReferences.length > 0) { // ? TODO: see above TODO: || project.removedProjectReferences.length > 0) {
                     if (projectFileUris.length > 0) {
                         this.outputLine(`\n[Project: ${project.name}] Since package references were removed, repeating to ${settings.sharpenFilesWhenRemovingUnusedReferences ? "sharpen files and " : ""}remove unused using directives for ${projectFileUris.length} C# files...`);
 
@@ -802,7 +809,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                     projects.filter(p => p.removedPackageReferences.length > 0).flatMap(p => ` - ${p.name} (${p.removedPackageReferences.length}):\n   - ${p.removedPackageReferences.flatMap(rp => rp.name).join("\n   - ")}`).forEach(p => this.outputLine(p));
                 }
 
-                // TODO: see above TODO
+                // ? TODO: see above TODO
                 // if (removedProjectReferencesTotalCount > 0) {
                 //     this.outputLine(`\nRemoved ${removedProjectReferencesTotalCount} project references from ${projects.length} projects:`);
                 //     projects.flatMap(p => ` - ${p.name} (${p.removedProjectReferences.length}):\n   - ${p.removedProjectReferences.flatMap(rp => rp.name).join("\n   - ")}`).forEach(p => this.outputLine(p));
@@ -826,7 +833,6 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
     private async sharpenFile(settings: CSharpenVSCodeExtensionSettings, textEditor: vscode.TextEditor, documentText: string, batchProcessing = false):
         Promise<[sharpened: boolean, removedUnusedUsingsCount: number, renamedSymbols: RenamedSymbol[], didError: boolean, sharpenError: string | undefined]> {
-
         const [fileFilterStatus, fileFilterReason] = FileFilter.checkAll(vscode.workspace.asRelativePath(textEditor.document.uri), documentText, settings.fileFilters);
         if (fileFilterStatus === FileFilterStatus.deny) {
             if (!batchProcessing) await this.warning(fileFilterReason!);
@@ -840,6 +846,10 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         // --- remove unused usings ---
 
         const removedUnusedUsingsCount = settings.removeUnusedUsingsOnSharpen ? await CSharpFile.removeUnusedUsings(textEditor) : 0;
+
+        // --- coding styles ---
+
+        if (!batchProcessing && settings.codingStylesEnabled && settings.codingStyles.anyEnabled) await this.applyCodingStylesToFile(settings, textEditor);
 
         // --- sharpen ---
 
@@ -903,28 +913,6 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
         } while (repeatSymbolRenaming); // NOTE: have to re-create the CSharpFile after each renamed symbol because of the symbol position values changing
 
-        // --- coding styles ---
-
-        if (!batchProcessing && settings.codingStylesEnabled && settings.codingStyles.anyEnabled) await this.applyCodingStylesToFile(settings, textEditor);
-
         return [true, removedUnusedUsingsCount, renamedSymbols, false, undefined];
     }
-}
-
-class DocumentSymbolCodeActions {
-    children: DocumentSymbolCodeActions[] = [];
-
-    constructor(public documentSymbol: vscode.DocumentSymbol, public codeActions: vscode.CodeAction[] = []) { }
-
-    get hasAny(): boolean { return this.codeActions.length > 0 || this.children.some(c => c.hasAny); }
-}
-
-class RenamedSymbol {
-    constructor(public symbolRenamingName: string, public previousName: string, public newName: string, public previousMemberName: string) { }
-}
-
-class TextDocumentCodeActions {
-    constructor(public textDocument: vscode.TextDocument, public children: DocumentSymbolCodeActions[] = []) { }
-
-    get hasAny(): boolean { return this.children.length > 0 && this.children.some(c => c.hasAny); }
 }

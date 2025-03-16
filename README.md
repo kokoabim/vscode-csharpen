@@ -1,16 +1,32 @@
-# _Sharpen_ C# Files
+<h1 align="center">
+    <p><img src="https://github.com/kokoabim/vscode-csharpen/blob/main/images/extension-512.png?raw=true" alt="logo" width="240"></p>
+    <p>CSharpen</p>
+</h1>
+<h3 align="center">C# File Organizer</h3>
+<p align="center">Order, sort and regionalize symbols by access level, name and type, and other features to keep your C# files <span style="font-weight:bold;font-style:italic;">sharp</span>.</p>
+<p align="center"><a href="https://marketplace.visualstudio.com/items?itemName=spencerjames.csharpen"><img src="https://vsmarketplacebadges.dev/version/spencerjames.csharpen.svg?label=CSharpen"></a></p>
 
-_Sharpen_ C# files by ordering, sorting and regionalizing symbols (directives, declarations, types and members) by access level, name and type.
+# Features
 
-Keyboard shortcut:
+-   Order, sort and regionalize symbols by access level, name and type.
+-   Remove unused `using` directives.
+-   Remove unused package references (NuGet) of one or more projects in a solution.
+-   Apply coding styles.
+-   Rename symbols by convention.
+-   Regionalize interface implementations.
+-   Output file diagnostics.
+
+### Keyboard shortcut
 
 -   Current file: **⇧**+**⌥**+**⌘**+**f** on macOS, **shift**+**alt**+**ctrl**+**f** on Windows/Linux
 -   Tip: Think Format Document command, which is **⇧**+**⌥**+**f** on macOS or **shift**+**alt**+**f** on Windows/Linux, but add **⌘** on macOS or **ctrl** on Windows/Linux.
 
-Commands:
+### Commands
 
 -   Current file: "Sharpen Document" (`kokoabim.csharpen.sharpen-file`)
 -   Project files: "Sharpen All Files In Project..." (`kokoabim.csharpen.sharpen-project-files`)
+
+See Features -> Commands for more.
 
 # Remove Unused Package References
 
@@ -31,6 +47,23 @@ Note: If this occurs, use the Quick Fix to re-edd the `using` directive. (**⌘*
 Remove unused `using` directives (either when _sharpening_ a file, removing unused package references or using a standalone command).
 
 Stand-alone command: "Remove Unused Using Declarations" (`kokoabim.csharpen.remove-unused-usings`)
+
+# Coding Styles
+
+Apply coding styles using a command ("Apply Coding Styles") or when _sharpening_ (by setting `csharpen.codingStylesEnabled` to `true`).
+
+### Current Coding Styles
+
+| Setting                                               | Description                                                                                                                              |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `csharpen.convertNonPrivateFieldsToProperties`        | Convert non-private fields to properties. Preserves value assignment (if any).                                                           |
+| `csharpen.useLanguageKeywordsInsteadOfFrameworkTypes` | Change BCL/Framework types to language keywords on return and member types. Example: `System.String` to `string`, `Int32` to `int`, etc. |
+
+Individual rules can be disabled in settings. By default all rules are enabled.
+
+### Future Coding Styles
+
+On subsequent releases, additional rules will be added.
 
 # Symbol Renaming
 

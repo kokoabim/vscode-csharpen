@@ -1,8 +1,15 @@
 ## β Beta
 
+#### 2025-03-15 — 0.5.4
+
+-   Added Coding Style rule `csharpen.convertNonPrivateFieldsToProperties` which converts non-private fields to properties.
+    -   To apply Coding Styles, use command: "Apply Coding Styles" or always apply when _sharpening_ by setting `csharpen.codingStylesEnabled` to `true`.
+-   Added setting (`csharpen.delayBeforeDetectingFileDiagnostics`) to indicate delay in milliseconds before detecting file diagnostics (to help with detecting them), which has a default value.
+-   Changed extension logo.
+
 #### 2025-02-10 — 0.5.3
 
--   Added Coding Styles feature. Currently only one rule is available: `UseLanguageKeywordsInsteadOfFrameworkTypes`. This changes BCL/Framework types to language keywords on return and member types. Example: `System.String` to `string`, `Int32` to `int`, etc. More rules will be added in future versions.
+-   Added Coding Styles feature. Currently only one rule is available: `csharpen.useLanguageKeywordsInsteadOfFrameworkTypes`. This changes BCL/Framework types to language keywords on return and member types. Example: `System.String` to `string`, `Int32` to `int`, etc. More rules will be added in future versions.
     -   Use command: `Apply Coding Styles` or always apply when _sharpening_ by setting `csharpen.codingStylesEnabled` to `true`.
 
 #### 2025-02-09 — 0.5.2
@@ -48,9 +55,9 @@
 
 -   **IN PREVIEW** (i.e. can have issues though can undo): Added feature to remove unused packages references (NuGet) of one or more projects in a solution. This also removes unused `using` directives. (Command: `Remove Unused References Of Project...`)
     -   **KNOWN ISSUE:** There is a possibility that _used_ `using` directives are incorrectly removed. If so, since all files are opened and modified, it can be undone.
-    -   Added new setting (`csharpen.doNotRemoveThesePackageReferences`) to indicate what package names to skip when removing unused package references, which has a default value. A conditional removal can be indicated by appending a semicolon (`;`) and another package reference name. If the second package reference exists, then the primary package reference will not be removed.
+    -   Added setting (`csharpen.doNotRemoveThesePackageReferences`) to indicate what package names to skip when removing unused package references, which has a default value. A conditional removal can be indicated by appending a semicolon (`;`) and another package reference name. If the second package reference exists, then the primary package reference will not be removed.
         -   Example: `foo;bar` will remove `foo` only if `bar` does _not_ exist. There are some package references that are not referenced in code but tooling requires them to be present.
-    -   Added new setting (`csharpen.delayBeforeRemovingUnusedUsingDirectives`) to indicate delay in milliseconds before detecting and removing unused `using` directives (to help with detecting them), which has a default value.
+    -   Added setting (`csharpen.delayBeforeRemovingUnusedUsingDirectives`) to indicate delay in milliseconds before detecting and removing unused `using` directives (to help with detecting them), which has a default value.
 -   Added ability to select one or more projects when sharpening all files in a project.
 -   Fixed issue with parsing non-code blocks (e.g. comments) prior to symbols.
 

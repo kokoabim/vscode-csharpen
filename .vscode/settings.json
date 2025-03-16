@@ -1,29 +1,32 @@
 {
     "files.exclude": {
-        "dist": false
+        "dist": false,
+        "**/bin": true,
+        "**/obj": true
     },
     "search.exclude": {
-        "dist": true
+        "dist": true,
+        "**/bin": true,
+        "**/obj": true
     },
     "cSpell.ignoreWords": [
         "SYSLIB",
         "Toste",
         "cctor",
-        "copyfiles",
         "cprr",
+        "dsca",
         "elif",
         "nint",
         "nuint",
         "pptr",
         "recordclass",
+        "recordstruct",
         "rogram"
     ],
     "cSpell.words": [
         "Cloneable",
         "csharpen",
-        "dsca",
         "Formattable",
-        "recordstruct",
         "Regionalizable",
         "regionalization",
         "regionalize",

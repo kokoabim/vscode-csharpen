@@ -23,12 +23,13 @@ export class CSharpSymbol {
     private fullName!: string;
     private header = "";
     private position: vscode.Position | undefined;
-    private range: vscode.Range | undefined;
     private textDocument: vscode.TextDocument | undefined;
 
     readonly data: { [key: string]: any } = {};
 
     accessModifier = CSharpAccessModifier.none;
+    assignment: string | undefined;
+    assignmentRange: vscode.Range | undefined;
     children: CSharpSymbol[] = [];
     implements: string[] = [];
     memberModifiers = CSharpMemberModifiers.none;
@@ -36,6 +37,7 @@ export class CSharpSymbol {
     nameRange: vscode.Range | undefined;
     namespace: string | undefined;
     parent: CSharpSymbol | undefined;
+    range: vscode.Range | undefined;
     regions: { start: string | undefined, end: string | undefined, groups: RegionGroup[] } = { start: undefined, end: undefined, groups: [] };
     returnType: string | undefined;
     returnTypeRange: vscode.Range | undefined;
@@ -110,6 +112,7 @@ export class CSharpSymbol {
 
         CSharpSymbol.parseNameAndNamespace(textDocument, symbol);
         CSharpSymbol.parseCodeBeforeSymbolName(symbol, symbol.body); // no need to handle boolean return value here
+        CSharpSymbol.parseAssignment(textDocument, symbol);
 
         if (symbol.type === CSharpSymbolType.method && symbol.name.includes(".")) symbol.accessModifier = CSharpAccessModifier.explicitInterfaceImplementation;
 
@@ -454,7 +457,11 @@ export class CSharpSymbol {
                     else if (currentChar === "<" || currentChar === "[" || currentChar === "(") {
                         depth = depth + direction;
                     }
-                    else if (currentChar === ">" || currentChar === "]" || currentChar === ")") {
+                    else if (currentChar === ">") {
+                        const charBefore = textDocument.getText(new vscode.Range(CSharpSymbol.movePosition(textDocument, currentPosition, -2), CSharpSymbol.movePosition(textDocument, currentPosition, -1)));
+                        if (charBefore !== "=") depth = depth - direction;
+                    }
+                    else if (currentChar === "]" || currentChar === ")") {
                         depth = depth - direction;
                     }
                     else if (currentChar === "/") {
@@ -710,6 +717,36 @@ export class CSharpSymbol {
         }
 
         return symbols;
+    }
+
+    private static parseAssignment(textDocument: vscode.TextDocument, symbol: CSharpSymbol): void {
+        if (symbol.type !== CSharpSymbolType.constant
+            && symbol.type !== CSharpSymbolType.field
+            && (symbol.type !== CSharpSymbolType.property || symbol.body.endsWith("}"))
+        ) return;
+
+        let possibleAssignmentStartPosition;
+
+        if (symbol.type === CSharpSymbolType.property) {
+            const [matchedPosition, matchedValue] = CSharpSymbol.getCharacterPosition(textDocument, symbol.range!.end, ["=", "}"], symbol.documentSymbol.selectionRange.end, true, -1);
+            if (matchedPosition === undefined || matchedValue === "}") return;
+            possibleAssignmentStartPosition = matchedPosition;
+        }
+        else {
+            possibleAssignmentStartPosition = symbol.documentSymbol.selectionRange.end;
+        }
+
+        // eslint-disable-next-line no-unused-vars
+        const [valuePosition, matchedValue] = CSharpSymbol.getCharacterPosition(textDocument, possibleAssignmentStartPosition, ["="], symbol.range!.end, true, 1);
+        if (valuePosition === undefined) return;
+
+        let assignmentRange = new vscode.Range(valuePosition, symbol.range!.end);
+        let assignment = textDocument.getText(assignmentRange);
+
+        if (!assignment.endsWith(";")) return; // TODO: remove after properties are handled
+
+        symbol.assignmentRange = assignmentRange.with({ end: CSharpSymbol.movePosition(textDocument, assignmentRange.end, -1) });
+        symbol.assignment = assignment.substring(0, assignment.length - 1);
     }
 
     private static parseAttributesAndModifiers(symbol: CSharpSymbol, text: string): number {
