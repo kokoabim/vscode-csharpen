@@ -1,8 +1,7 @@
 import { basename } from "path/posix";
 
-
 export class CSharpProjectProjectReference {
-    static readonly regExp = /(^[ \t]*)?<ProjectReference\s+Include="(?<path>[^"]*)"([^>]*?\/>|.*<\/ProjectReference>)([ \t]*$)?/gs;
+    public static readonly regExp = /(^[ \t]*)?<ProjectReference\s+Include="(?<path>[^"]*)"([^>]*?\/>|.*<\/ProjectReference>)([ \t]*$)?/gs;
 
     public readonly name: string;
 

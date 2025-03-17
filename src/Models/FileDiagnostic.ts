@@ -1,17 +1,14 @@
 import * as vscode from "vscode";
 
 export class FileDiagnostic {
-    identifier?: string;
-    info?: string;
-    message: string;
-    path: string;
-    range: vscode.Range;
-    severity: FileDiagnosticSeverity;
-    source?: string;
+    public readonly identifier?: string;
+    public readonly info?: string;
+    public readonly message: string;
+    public readonly range: vscode.Range;
+    public readonly severity: FileDiagnosticSeverity;
+    public readonly source?: string;
 
-    constructor(path: string, diagnostic: vscode.Diagnostic) {
-        this.path = path;
-
+    constructor(public readonly path: string, diagnostic: vscode.Diagnostic) {
         this.message = diagnostic.message;
         this.range = diagnostic.range;
         this.severity = <number>diagnostic.severity;
@@ -31,21 +28,21 @@ export class FileDiagnostic {
         }
     }
 
-    get severityText() { return vscode.DiagnosticSeverity[this.severity]; }
+    public get severityText() { return vscode.DiagnosticSeverity[this.severity]; }
 
-    toString() {
+    public toString(): string {
         let additionalInfo = "";
         if (this.identifier) additionalInfo += `, ${this.identifier}`;
         if (this.info) additionalInfo += `, ${this.info}`;
         if (additionalInfo) additionalInfo = ` (${additionalInfo.substring(2)})`;
 
-        return `[${this.path}:${this.range.start.line + 1}:${this.range.start.character + 1}] ${this.severityText}: ${this.message}${additionalInfo}`;
+        return `${this.range.start.line + 1}:${this.range.start.character + 1}: ${this.severityText}: ${this.message}${additionalInfo}`;
     }
 }
 
 export class FileDiagnosticIdentifier {
-    static readonly useGeneratedRegexAttributeToGenerateRegExpAtCompileTime = "SYSLIB1045";
-    static readonly usingDirectiveUnnecessary = "IDE0005";
+    public static readonly useGeneratedRegexAttributeToGenerateRegExpAtCompileTime = "SYSLIB1045";
+    public static readonly usingDirectiveUnnecessary = "IDE0005";
 }
 
 export enum FileDiagnosticSeverity {

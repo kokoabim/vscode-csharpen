@@ -99,7 +99,6 @@ export namespace CSharpSymbolType {
             case CSharpSymbolType.recordClass: return "records";
             case CSharpSymbolType.recordStruct: return "record structs";
 
-
             case CSharpSymbolType.delegate: return "delegates";
             case CSharpSymbolType.event: return "events";
             case CSharpSymbolType.constant: return "constants";

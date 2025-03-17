@@ -1,19 +1,18 @@
-
 export class FileFilter {
-    confirmOnDeny = false;
-    fileName?: string;
-    matchLogic = true;
-    name!: string;
-    pattern!: string;
-    reason?: string;
+    public confirmOnDeny = false;
+    public fileName?: string;
+    public matchLogic = true;
+    public name!: string;
+    public pattern!: string;
+    public reason?: string;
 
     constructor(init: Partial<FileFilter>) {
         Object.assign(this, init);
     }
 
-    get ignoredReason() { return this.reason ? this.reason : `File filter: ${this.name}`; }
+    public get ignoredReason() { return this.reason ? this.reason : `File filter: ${this.name}`; }
 
-    static checkAll(fileName: string, content: string, fileFilters: FileFilter[]): [FileFilterStatus, string | undefined] {
+    public static checkAll(fileName: string, content: string, fileFilters: FileFilter[]): [FileFilterStatus, string | undefined] {
         for (const ff of fileFilters) {
             const check = ff.check(fileName, content);
             if (check !== FileFilterStatus.allow) return [check, ff.ignoredReason];
@@ -22,7 +21,7 @@ export class FileFilter {
         return [FileFilterStatus.allow, undefined];
     }
 
-    check(fileName: string, content: string): FileFilterStatus {
+    public check(fileName: string, content: string): FileFilterStatus {
         return this.fileNameIsOk(fileName) && this.patternLogicMatchesContent(content)
             ? this.confirmOnDeny ? FileFilterStatus.confirm : FileFilterStatus.deny
             : FileFilterStatus.allow;

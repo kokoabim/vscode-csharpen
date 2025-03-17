@@ -15,11 +15,14 @@ export class CSharpenWorkspaceSettings {
     public codingStylesEnabled: boolean | undefined;
     public delayBeforeDetectingFileDiagnostics: number | undefined;
     public delayBeforeRemovingUnusedUsingDirectives: number | undefined;
+    public delayBeforeSharpeningFile: number | undefined;
     public doNotRemoveThesePackageReferences: string[] | undefined;
     public enforceFileScopedNamespaces: boolean | undefined;
     public fileFilters: FileFilter[] | undefined;
     public formatDocumentOnSharpen: boolean | undefined;
     public namespaceLevelOrganization: CSharpOrganizeSettings | undefined;
+    public performQuickFixesOnSharpen: boolean | undefined;
+    public quickFixesToPerform: string[] | undefined;
     public quickFixFilters: string[] | undefined;
     public regionalizeInterfaceImplementations: string[] | undefined;
     public removeUnusedUsingsOnSharpen: boolean | undefined;

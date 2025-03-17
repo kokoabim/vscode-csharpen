@@ -11,10 +11,11 @@
 -   Order, sort and regionalize symbols by access level, name and type.
 -   Remove unused `using` directives.
 -   Remove unused package references (NuGet) of one or more projects in a solution.
+-   Perform Quick Fixes.
 -   Apply coding styles.
 -   Rename symbols by convention.
 -   Regionalize interface implementations.
--   Output file diagnostics.
+-   Output File Diagnostics and Quick Fixes.
 
 ### Keyboard shortcut
 
@@ -29,8 +30,6 @@
 See Features -> Commands for more.
 
 # Remove Unused Package References
-
-### IN PREVIEW — Experimental, Though Can Be Undone
 
 Remove unused package references (NuGet) from one or more projects. For all C# files of the projects being processed, unused `using` directives will be removed and, if enabled, the file will be _sharpened_ (setting: `csharpen.sharpenFilesWhenRemovingUnusedReferences`).
 
@@ -47,6 +46,12 @@ Note: If this occurs, use the Quick Fix to re-edd the `using` directive. (**⌘*
 Remove unused `using` directives (either when _sharpening_ a file, removing unused package references or using a standalone command).
 
 Stand-alone command: "Remove Unused Using Declarations" (`kokoabim.csharpen.remove-unused-usings`)
+
+# Perform Quick Fixes
+
+Based on configurable Quick Fix title patterns, performs all matched Quick Fixes for the current file. Can be invoked by command (`Perform Quick Fixes`) or when _sharpening_ a file by setting `csharpen.performQuickFixesOnSharpen` to `true` (`false` by default). Whether enabled or not, not invoked when processing all project files.
+
+See settings for default patterns. More default patterns can be added in future releases.
 
 # Coding Styles
 
@@ -115,9 +120,9 @@ Notes:
 -   [Explicit interface implementations](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/interfaces/explicit-interface-implementation) _are_ detected and supported.
 -   With `IDisposable` and `IAsyncDisposable` the finalizer (i.e. destructor) and possible `/^_?(is)?disposed$/i` (RegExp pattern) boolean instance field are also moved to the region.
 
-# Output File Diagnostics
+# Output File Diagnostics and Quick Fixes
 
-Output file diagnostics to an output panel. This includes language-specific diagnostics (e.g. syntax, semantic, compiler error/warning) and, when outputting for a single file, it includes the Quick Fixes.
+Output File Diagnostics and Quick Fixes to output panel. This includes language-specific diagnostics (e.g. syntax, semantic, compiler error/warning) and what Quick Fixes are available.
 
 Commands:
 

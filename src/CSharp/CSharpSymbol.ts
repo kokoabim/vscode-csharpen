@@ -1,5 +1,6 @@
-import util from "node:util";
 import * as vscode from "vscode";
+
+import util from "node:util";
 
 import "../Extensions/Array.extensions";
 import "../Extensions/String.extensions";
@@ -25,31 +26,31 @@ export class CSharpSymbol {
     private position: vscode.Position | undefined;
     private textDocument: vscode.TextDocument | undefined;
 
-    readonly data: { [key: string]: any } = {};
+    public readonly data: { [key: string]: any } = {};
 
-    accessModifier = CSharpAccessModifier.none;
-    assignment: string | undefined;
-    assignmentRange: vscode.Range | undefined;
-    children: CSharpSymbol[] = [];
-    implements: string[] = [];
-    memberModifiers = CSharpMemberModifiers.none;
-    name!: string;
-    nameRange: vscode.Range | undefined;
-    namespace: string | undefined;
-    parent: CSharpSymbol | undefined;
-    range: vscode.Range | undefined;
-    regions: { start: string | undefined, end: string | undefined, groups: RegionGroup[] } = { start: undefined, end: undefined, groups: [] };
-    returnType: string | undefined;
-    returnTypeRange: vscode.Range | undefined;
-    type = CSharpSymbolType.none;
+    public accessModifier = CSharpAccessModifier.none;
+    public assignment: string | undefined;
+    public assignmentRange: vscode.Range | undefined;
+    public children: CSharpSymbol[] = [];
+    public implements: string[] = [];
+    public memberModifiers = CSharpMemberModifiers.none;
+    public name!: string;
+    public nameRange: vscode.Range | undefined;
+    public namespace: string | undefined;
+    public parent: CSharpSymbol | undefined;
+    public range: vscode.Range | undefined;
+    public regions: { start: string | undefined, end: string | undefined, groups: RegionGroup[] } = { start: undefined, end: undefined, groups: [] };
+    public returnType: string | undefined;
+    public returnTypeRange: vscode.Range | undefined;
+    public type = CSharpSymbolType.none;
 
     private constructor() { }
 
-    get canHaveChildren(): boolean { return CSharpSymbolType.canHaveChildren(this.type); }
+    public get canHaveChildren(): boolean { return CSharpSymbolType.canHaveChildren(this.type); }
 
-    get hasChildren(): boolean { return this.children.length > 0; }
+    public get hasChildren(): boolean { return this.children.length > 0; }
 
-    get innerText(): string {
+    public get innerText(): string {
         if (!this.canHaveChildren) return `${this.header ? this.header + "\n" : ""}${this.body}${this.footer ? "\n" + this.footer : ""}`;
         else if (this.children.length === 0) return `${this.header ? this.header + (this.header.endsWith(";") ? "" : "\n") : ""}${this.footer ? this.footer : ""}`;
 
@@ -57,22 +58,22 @@ export class CSharpSymbol {
         return `${this.header ? this.header + "\n" : ""}${body}${this.footer ? "\n" + this.footer : ""}`;
     }
 
-    get isMultiLine(): boolean { return this.innerText.includes("\n"); }
+    public get isMultiLine(): boolean { return this.innerText.includes("\n"); }
 
-    get memberName(): string { return this.parent ? `${this.parent.name}.${this.name}` : this.name; }
+    public get memberName(): string { return this.parent ? `${this.parent.name}.${this.name}` : this.name; }
 
-    get nameTypeHasGenerics(): boolean { return this.name?.includes("<") ?? false; }
+    public get nameTypeHasGenerics(): boolean { return this.name?.includes("<") ?? false; }
 
-    get returnTypeHasGenerics(): boolean { return this.returnType?.includes("<") ?? false; }
+    public get returnTypeHasGenerics(): boolean { return this.returnType?.includes("<") ?? false; }
 
-    get text(): string {
+    public get text(): string {
         const regionStart = this.regions.start !== undefined ? `${(this.parent?.header.endsWith("{") ? CSharpenVSCodeExtensionSettings.shared().indentation : "")}#region ${this.regions.start}\n${this.canHaveChildren || this.isMultiLine ? "\n" : ""}` : "";
         const regionEnd = this.regions.end !== undefined ? `${this.canHaveChildren || this.isMultiLine ? "\n" : ""}\n${(this.parent?.header.endsWith("{") ? CSharpenVSCodeExtensionSettings.shared().indentation : "")}#endregion ${this.regions.end}` : "";
 
         return `${regionStart}${this.innerText}${regionEnd}`;
     }
 
-    static addUsingAndNamespaceSymbols(usingAndNamespaceSymbols: CSharpSymbol[], symbols: CSharpSymbol[]): void {
+    public static addUsingAndNamespaceSymbols(usingAndNamespaceSymbols: CSharpSymbol[], symbols: CSharpSymbol[]): void {
         const namespaceSymbols = usingAndNamespaceSymbols.filter(s => s.type === CSharpSymbolType.namespace);
         const singleFileScopedNamespaceExists = namespaceSymbols.filter(s => s.data.isFileScoped).length === 1;
 
@@ -94,7 +95,7 @@ export class CSharpSymbol {
         CSharpSymbol.orderByPosition(symbols);
     }
 
-    static create(textDocument: vscode.TextDocument, documentSymbol: vscode.DocumentSymbol, parent?: CSharpSymbol): CSharpSymbol | undefined {
+    public static create(textDocument: vscode.TextDocument, documentSymbol: vscode.DocumentSymbol, parent?: CSharpSymbol): CSharpSymbol | undefined {
         if (CSharpSymbol.isEventMethod(documentSymbol)) return undefined;
 
         const symbol = new CSharpSymbol();
@@ -138,7 +139,7 @@ export class CSharpSymbol {
     /** 1. Creates non-codeblock symbols containing text before and after each symbol of provided {@link symbols} array and adds them to {@link CSharpSymbol.link} of the corresponding symbol. Non-codeblock symbols are not added to provided {@link symbols} array.
      * 2. Moves comments from non-codeblock symbols to the corresponding symbols.
      * 3. Moves preprocessor directives from non-codeblock symbols to the corresponding symbols. */
-    static createNonCodeblockSymbols(textDocument: vscode.TextDocument, usingAndNamespaceSymbols: CSharpSymbol[], symbols: CSharpSymbol[], parent?: CSharpSymbol): void {
+    public static createNonCodeblockSymbols(textDocument: vscode.TextDocument, usingAndNamespaceSymbols: CSharpSymbol[], symbols: CSharpSymbol[], parent?: CSharpSymbol): void {
         const nonCodeblockSymbols: CSharpSymbol[] = [];
 
         const isFileScopedNamespace = parent?.type === CSharpSymbolType.namespace && parent.data.isFileScoped;
@@ -183,14 +184,14 @@ export class CSharpSymbol {
     }
 
     /** Creates {@link CSharpSymbol} array of provided {@link documentSymbols}, organizes parent-to-child hierarchy and orders symbols by file position recursively. */
-    static createSymbols(textDocument: vscode.TextDocument, documentSymbols: vscode.DocumentSymbol[]): CSharpSymbol[] {
+    public static createSymbols(textDocument: vscode.TextDocument, documentSymbols: vscode.DocumentSymbol[]): CSharpSymbol[] {
         const symbols = documentSymbols.sort((a, b) => a.range.start.compareTo(b.range.start)).map(ds => CSharpSymbol.create(textDocument, ds)).filter(s => s !== undefined) as CSharpSymbol[];
         CSharpSymbol.organizeParentToChildHierarchy(symbols);
         return CSharpSymbol.orderByPosition(symbols);
     }
 
     /** Creates array of using and namespace symbols. */
-    static createUsingAndNamespaceSymbols(textDocument: vscode.TextDocument, symbols: CSharpSymbol[]): CSharpSymbol[] {
+    public static createUsingAndNamespaceSymbols(textDocument: vscode.TextDocument, symbols: CSharpSymbol[]): CSharpSymbol[] {
         let strippedDocumentText = CSharpSymbol.stripSymbolAndCommentText(textDocument, symbols);
         let usingSymbols: CSharpSymbol[];
         let namespaceSymbols: CSharpSymbol[];
@@ -203,7 +204,7 @@ export class CSharpSymbol {
         return CSharpSymbol.orderByPosition(usingSymbols.concat(namespaceSymbols));
     }
 
-    static join(symbols: CSharpSymbol[]): string {
+    public static join(symbols: CSharpSymbol[]): string {
         const sb = new StringBuilder();
 
         symbols.forEach((s, i, a) => {
@@ -214,16 +215,16 @@ export class CSharpSymbol {
         return sb.toString();
     }
 
-    [util.inspect.custom](): string {
+    public [util.inspect.custom](): string {
         return `${CSharpSymbolType[this.type]}${this.hasChildren ? `[${this.children.length}]` : ""}: ${this.name ?? this.fullName}`;
     }
 
-    debug(depth = 0): void {
+    public debug(depth = 0): void {
         console.log(`${depth > 0 ? " ".repeat(depth * 4) : ""}${CSharpSymbolType[this.type]}${this.hasChildren ? `[${this.children.length}]` : ""}: ${this.name}${this.namespace ? `, namespace=${this.namespace}` : ""}${this.parent ? `, parent=${this.parent.name}` : ""}${this.accessModifier !== CSharpAccessModifier.none ? `, accessModifier=${CSharpAccessModifier[this.accessModifier]}` : ""}`);
         this.children.forEach(c => c.debug(depth + 1));
     }
 
-    doesImplement(typeToCheck: string, isGenericType: boolean, availableSymbolsToRecurse?: CSharpSymbol[]): boolean {
+    public doesImplement(typeToCheck: string, isGenericType: boolean, availableSymbolsToRecurse?: CSharpSymbol[]): boolean {
         return /* 'this' implements 'typeToCheck' */ this.implements.anyMatches(`^${typeToCheck}${isGenericType ? "<.*?>" : ""}$`)
             /* check what each 'availableSymbolsToRecurse' implements... */ || (availableSymbolsToRecurse !== undefined && availableSymbolsToRecurse.some(s =>
                 /* class/interface */(s.type === CSharpSymbolType.class || s.type === CSharpSymbolType.interface)

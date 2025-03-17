@@ -55,7 +55,6 @@ export class CodingStyles {
 
             const symbolMatches = convertNonPrivateFieldsToPropertiesSymbolMatcher.filter(symbols);
             for (const symbolMatch of symbolMatches) {
-
                 console.log(`[${CodingStyles.convertNonPrivateFieldsToPropertiesName}]: ${symbolMatch.symbol.name}`);
 
                 let editSucceeded = false;

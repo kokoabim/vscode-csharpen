@@ -4,7 +4,7 @@ declare global {
         matches(input: string): RegExpExecArray[];
         matchGroupValues(input: string, groupName: string): string[];
     }
-};
+}
 
 RegExp.prototype.matchGroupValues = function (input: string, groupName: string): string[] {
     return this.matches(input).map(match => match.groups?.[groupName]).filter(value => value !== undefined) as string[];

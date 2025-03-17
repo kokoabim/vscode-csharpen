@@ -1,5 +1,5 @@
 export class CSharpOrganizeSettings {
-    static get defaultNamespaceLevelOrganization(): CSharpOrganizeSettings {
+    public static get defaultNamespaceLevelOrganization(): CSharpOrganizeSettings {
         return {
             "ordering": [
                 "type",
@@ -31,7 +31,7 @@ export class CSharpOrganizeSettings {
         } as CSharpOrganizeSettings;
     }
 
-    static get defaultTypeLevelOrganization(): CSharpOrganizeSettings {
+    public static get defaultTypeLevelOrganization(): CSharpOrganizeSettings {
         return {
             "ordering": [
                 "type",
@@ -77,16 +77,16 @@ export class CSharpOrganizeSettings {
         } as CSharpOrganizeSettings;
     }
 
-    doNotRegionalizeMembersOf: string[] = [];
-    doNotRegionalizeTypes: string[] = [];
-    onlyRegionalizeMembersOf: string[] = [];
-    onlyRegionalizeTypes: string[] = [];
-    ordering: string[] = [];
-    regionThreshold = 5;
-    regionalization: string[] = [];
-    typeSort: string[] = [];
+    public doNotRegionalizeMembersOf: string[] = [];
+    public doNotRegionalizeTypes: string[] = [];
+    public onlyRegionalizeMembersOf: string[] = [];
+    public onlyRegionalizeTypes: string[] = [];
+    public ordering: string[] = [];
+    public regionThreshold = 5;
+    public regionalization: string[] = [];
+    public typeSort: string[] = [];
 
-    static filterTypeSort(typeSort: string[]): string[] {
+    public static filterTypeSort(typeSort: string[]): string[] {
         if (typeSort.includes("using")) typeSort = typeSort.filter(t => t !== "using");
         if (typeSort.includes("namespace")) typeSort = typeSort.filter(t => t !== "namespace");
         return typeSort;

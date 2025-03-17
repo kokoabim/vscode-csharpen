@@ -21,14 +21,14 @@ export class CSharpenVSCodeExtensionSettings extends VSCodeExtensionSettings {
     public codingStylesEnabled = false;
     public delayBeforeDetectingFileDiagnostics = 300;
     public delayBeforeRemovingUnusedUsingDirectives = 300;
+    public delayBeforeSharpeningFile = 300;
     public doNotRemoveThesePackageReferences = CSharpenVSCodeExtensionSettings.defaultDoNotRemoveThesePackageReferences;
     public enforceFileScopedNamespaces = true;
     public fileFilters = CSharpenVSCodeExtensionSettings.defaultFileFilters;
     public formatDocumentOnSharpen = true;
-    public indentation!: string;
-
- // not read from extension setting but from editor settings
     public namespaceLevelOrganization = CSharpOrganizeSettings.defaultNamespaceLevelOrganization;
+    public performQuickFixesOnSharpen = false;
+    public quickFixesToPerform: string[] = [];
     public quickFixFilters = CSharpenVSCodeExtensionSettings.defaultQuickFixFilters;
     public regionalizeInterfaceImplementations = CSharpenVSCodeExtensionSettings.getRegionalizeInterfaceImplementations(["*"]);
     public removeUnusedUsingsOnSharpen = true;
@@ -38,6 +38,9 @@ export class CSharpenVSCodeExtensionSettings extends VSCodeExtensionSettings {
     public symbolRenaming = CSharpenVSCodeExtensionSettings.defaultSymbolRenaming;
     public symbolRenamingEnabled = false;
     public typeLevelOrganization = CSharpOrganizeSettings.defaultTypeLevelOrganization;
+
+    // not read from extension setting but from editor settings
+    public indentation!: string;
 
     constructor(readConfigurations = true, doNotUseWorkspaceSettings = false) {
         super();
@@ -158,11 +161,14 @@ export class CSharpenVSCodeExtensionSettings extends VSCodeExtensionSettings {
         workspaceSettings.codingStylesEnabled = extensionSettings.codingStylesEnabled;
         workspaceSettings.delayBeforeDetectingFileDiagnostics = extensionSettings.delayBeforeDetectingFileDiagnostics;
         workspaceSettings.delayBeforeRemovingUnusedUsingDirectives = extensionSettings.delayBeforeRemovingUnusedUsingDirectives;
+        workspaceSettings.delayBeforeSharpeningFile = extensionSettings.delayBeforeSharpeningFile;
         workspaceSettings.doNotRemoveThesePackageReferences = extensionSettings.doNotRemoveThesePackageReferences;
         workspaceSettings.enforceFileScopedNamespaces = extensionSettings.enforceFileScopedNamespaces;
         workspaceSettings.fileFilters = extensionSettings.fileFilters;
         workspaceSettings.formatDocumentOnSharpen = extensionSettings.formatDocumentOnSharpen;
         workspaceSettings.namespaceLevelOrganization = extensionSettings.namespaceLevelOrganization;
+        workspaceSettings.performQuickFixesOnSharpen = extensionSettings.performQuickFixesOnSharpen;
+        workspaceSettings.quickFixesToPerform = extensionSettings.quickFixesToPerform;
         workspaceSettings.quickFixFilters = extensionSettings.quickFixFilters;
         workspaceSettings.regionalizeInterfaceImplementations = extensionSettings.regionalizeInterfaceImplementations;
         workspaceSettings.removeUnusedUsingsOnSharpen = extensionSettings.removeUnusedUsingsOnSharpen;
@@ -183,11 +189,14 @@ export class CSharpenVSCodeExtensionSettings extends VSCodeExtensionSettings {
         if (workspaceSettings.codingStylesEnabled !== undefined) extensionSettings.codingStylesEnabled = workspaceSettings.codingStylesEnabled;
         if (workspaceSettings.delayBeforeDetectingFileDiagnostics !== undefined) extensionSettings.delayBeforeDetectingFileDiagnostics = workspaceSettings.delayBeforeDetectingFileDiagnostics;
         if (workspaceSettings.delayBeforeRemovingUnusedUsingDirectives !== undefined) extensionSettings.delayBeforeRemovingUnusedUsingDirectives = workspaceSettings.delayBeforeRemovingUnusedUsingDirectives;
+        if (workspaceSettings.delayBeforeSharpeningFile !== undefined) extensionSettings.delayBeforeSharpeningFile = workspaceSettings.delayBeforeSharpeningFile;
         if (workspaceSettings.doNotRemoveThesePackageReferences !== undefined) extensionSettings.doNotRemoveThesePackageReferences = workspaceSettings.doNotRemoveThesePackageReferences;
         if (workspaceSettings.enforceFileScopedNamespaces !== undefined) extensionSettings.enforceFileScopedNamespaces = workspaceSettings.enforceFileScopedNamespaces;
         if (workspaceSettings.fileFilters !== undefined) extensionSettings.fileFilters = workspaceSettings.fileFilters;
         if (workspaceSettings.formatDocumentOnSharpen) extensionSettings.formatDocumentOnSharpen = workspaceSettings.formatDocumentOnSharpen;
         if (workspaceSettings.namespaceLevelOrganization !== undefined) extensionSettings.namespaceLevelOrganization = workspaceSettings.namespaceLevelOrganization;
+        if (workspaceSettings.performQuickFixesOnSharpen !== undefined) extensionSettings.performQuickFixesOnSharpen = workspaceSettings.performQuickFixesOnSharpen;
+        if (workspaceSettings.quickFixesToPerform !== undefined) extensionSettings.quickFixesToPerform = workspaceSettings.quickFixesToPerform;
         if (workspaceSettings.quickFixFilters !== undefined) extensionSettings.quickFixFilters = workspaceSettings.quickFixFilters;
         if (workspaceSettings.regionalizeInterfaceImplementations !== undefined) extensionSettings.regionalizeInterfaceImplementations = workspaceSettings.regionalizeInterfaceImplementations;
         if (workspaceSettings.removeUnusedUsingsOnSharpen !== undefined) extensionSettings.removeUnusedUsingsOnSharpen = workspaceSettings.removeUnusedUsingsOnSharpen;
@@ -281,9 +290,12 @@ export class CSharpenVSCodeExtensionSettings extends VSCodeExtensionSettings {
         settings.codingStylesEnabled = settings.get<boolean>("codingStylesEnabled") ?? false;
         settings.delayBeforeDetectingFileDiagnostics = settings.get<number>("delayBeforeDetectingFileDiagnostics") ?? 300;
         settings.delayBeforeRemovingUnusedUsingDirectives = settings.get<number>("delayBeforeRemovingUnusedUsingDirectives") ?? 300;
+        settings.delayBeforeSharpeningFile = settings.get<number>("delayBeforeSharpeningFile") ?? 300;
         settings.doNotRemoveThesePackageReferences = settings.get<string[]>("doNotRemoveThesePackageReferences") ?? [];
         settings.enforceFileScopedNamespaces = settings.get<boolean>("enforceFileScopedNamespaces") ?? true;
         settings.formatDocumentOnSharpen = settings.get<boolean>("formatDocumentOnSharpen") ?? true;
+        settings.performQuickFixesOnSharpen = settings.get<boolean>("performQuickFixesOnSharpen") ?? false;
+        settings.quickFixesToPerform = settings.get<string[]>("quickFixesToPerform") ?? [];
         settings.quickFixFilters = settings.get<string[]>("quickFixFilters") ?? [];
         settings.regionalizeInterfaceImplementations = settings.get<string[]>("regionalizeInterfaceImplementations") ?? [];
         settings.removeUnusedUsingsOnSharpen = settings.get<boolean>("removeUnusedUsingsOnSharpen") ?? true;

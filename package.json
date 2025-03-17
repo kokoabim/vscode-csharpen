@@ -1,7 +1,7 @@
 {
     "name": "csharpen",
     "publisher": "spencerjames",
-    "version": "0.5.4",
+    "version": "0.5.5",
     "description": "Sharpen (organize) C# files by ordering, sorting and regionalizing symbols.",
     "displayName": "CSharpen — C# File Organizer",
     "shortName": "CSharpen",
@@ -46,6 +46,12 @@
     "main": "./dist/extension.js",
     "contributes": {
         "commands": [
+            {
+                "category": "CSharpen",
+                "title": "Perform Quick Fixes",
+                "command": "kokoabim.csharpen.perform-quick-fixes",
+                "enablement": "editorLangId == csharp || resourceLangId == csharp"
+            },
             {
                 "category": "CSharpen",
                 "title": "Sharpen Document",
@@ -682,7 +688,7 @@
                 },
                 "csharpen.quickFixFilters": {
                     "order": 9,
-                    "markdownDescription": "Patterns to filter out QuickFix titles when outputting file diagnostics.",
+                    "markdownDescription": "Patterns to filter out (exclude) Quick Fix titles when outputting File Diagnostics and Quick Fixes.",
                     "type": "array",
                     "items": {
                         "type": "string",
@@ -863,9 +869,48 @@
                 },
                 "csharpen.delayBeforeDetectingFileDiagnostics": {
                     "order": 19,
-                    "markdownDescription": "Delay (in milliseconds) before detecting file diagnostics.",
+                    "markdownDescription": "Delay (in milliseconds) before detecting File Diagnostics and Quick Fixes when processing all project files.",
                     "type": "integer",
                     "default": 300
+                },
+                "csharpen.quickFixesToPerform": {
+                    "order": 20,
+                    "markdownDescription": "Patterns of Quick Fix titles to perform.",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "uniqueItems": true
+                    },
+                    "default": [
+                        "Collection initialization can be simplified$",
+                        "Convert to conditional expression",
+                        "Deconstruct variable declaration",
+                        "Make anonymous function static",
+                        "Make static",
+                        "Remove accessibility modifiers",
+                        "Simplify LINQ expression",
+                        "Simplify member access",
+                        "Use 'Count' check instead",
+                        "Use 'TryGetValue",
+                        "Use Length/Count property instead",
+                        "Use discard",
+                        "Use pattern matching",
+                        "Use simple 'using'",
+                        "use 'var' instead",
+                        "Use collection expression"
+                    ]
+                },
+                "csharpen.delayBeforeSharpeningFile": {
+                    "order": 21,
+                    "markdownDescription": "Delay (in milliseconds) before _sharpening_ file when processing all project files.",
+                    "type": "integer",
+                    "default": 300
+                },
+                "csharpen.performQuickFixesOnSharpen": {
+                    "order": 22,
+                    "markdownDescription": "Perform Quick Fixes matched by `csharpen.quickFixesToPerform` patterns on _sharpen_.",
+                    "type": "boolean",
+                    "default": false
                 }
             }
         }

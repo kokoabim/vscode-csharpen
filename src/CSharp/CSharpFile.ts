@@ -1,5 +1,6 @@
-import util from "node:util";
 import * as vscode from "vscode";
+
+import util from "node:util";
 
 import "../Extensions/Array.extensions";
 
@@ -9,15 +10,15 @@ import { CSharpSymbol } from "./CSharpSymbol";
 import { CSharpSymbolType } from "./CSharpSymbolType";
 
 export class CSharpFile {
-    static readonly zeroPosition = new vscode.Position(0, 0);
+    public static readonly zeroPosition = new vscode.Position(0, 0);
 
-    readonly filePath: string;
+    public readonly filePath: string;
     public readonly name: string;
     public readonly namespace = undefined;
     public readonly parent = undefined;
     public readonly type = CSharpSymbolType.file;
 
-    children: CSharpSymbol[] = [];
+    public children: CSharpSymbol[] = [];
 
     private constructor(public readonly textDocument: vscode.TextDocument) {
         this.filePath = vscode.workspace.asRelativePath(textDocument.uri);
@@ -25,28 +26,19 @@ export class CSharpFile {
         this.textDocument = textDocument;
     }
 
-    get hasChildren(): boolean { return this.children.length > 0; }
+    public get hasChildren(): boolean { return this.children.length > 0; }
 
-    get text(): string {
+    public get text(): string {
         return this.hasChildren ? CSharpSymbol.join(this.children) : "";
     }
 
-    static async create(textDocument: vscode.TextDocument): Promise<CSharpFile> {
+    public static async create(textDocument: vscode.TextDocument): Promise<CSharpFile> {
         const csharpFile = new CSharpFile(textDocument);
         csharpFile.children = await CSharpFile.parseSymbols(textDocument);
         return csharpFile;
     }
 
-    static getFileDiagnosticsUsingTextDocument(document: vscode.TextDocument): FileDiagnostic[] {
-        return vscode.languages.getDiagnostics(document.uri).map(d => new FileDiagnostic(FileSystem.fileNameUsingTextDocument(document), d));
-    }
-
-    static getFileDiagnosticsUsingUri(uri: vscode.Uri): FileDiagnostic[] {
-        return vscode.languages.getDiagnostics(uri).map(d => new FileDiagnostic(FileSystem.fileNameUsingUri(uri), d));
-    }
-
-    static async removeUnusedUsings(textEditor: vscode.TextEditor): Promise<number> {
-        const fileDiagnostics = this.getFileDiagnosticsUsingTextDocument(textEditor.document);
+    public static async removeUnusedUsings(textEditor: vscode.TextEditor, fileDiagnostics: FileDiagnostic[]): Promise<number> {
         const unusedUsings = fileDiagnostics.filter(d => d.identifier === FileDiagnosticIdentifier.usingDirectiveUnnecessary);
         if (unusedUsings.length === 0) return 0;
 
@@ -68,11 +60,11 @@ export class CSharpFile {
         return unusedUsings.length;
     }
 
-    [util.inspect.custom](): string {
+    public [util.inspect.custom](): string {
         return `${CSharpSymbolType[this.type]}${this.hasChildren ? `[${this.children.length}]` : ""}: ${FileSystem.fileNameUsingTextDocument(this.textDocument)}`;
     }
 
-    debug(): void {
+    public debug(): void {
         console.log(`${CSharpSymbolType[this.type]}: name=${this.name}, path=${this.filePath}`);
         if (this.hasChildren) this.children.forEach(c => c.debug());
     }

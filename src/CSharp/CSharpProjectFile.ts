@@ -1,8 +1,10 @@
 import * as vscode from "vscode";
-import * as fs from "fs/promises";
 
 import { glob } from "glob";
 import { basename, dirname } from "path";
+
+import * as fs from "fs/promises";
+
 import { Executor } from "../Utils/Executor";
 import { CSharpProjectPackageReference } from "./CSharpProjectPackageReference";
 import { CSharpProjectProjectReference } from "./CSharpProjectProjectReference";

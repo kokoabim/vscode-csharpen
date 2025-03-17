@@ -1,16 +1,17 @@
 import "../Extensions/Array.extensions";
-import { CSharpAccessModifier } from "./CSharpAccessModifier";
+
+import { RegionGroup } from "../Models/RegionGroup";
 import { CSharpenVSCodeExtensionSettings } from "../VSCodeExtension/CSharpenVSCodeExtensionSettings";
+import { CSharpAccessModifier } from "./CSharpAccessModifier";
 import { CSharpFile } from "./CSharpFile";
 import { CSharpOrganizeSettings } from "./CSharpOrganizeSettings";
 import { CSharpSymbol } from "./CSharpSymbol";
 import { CSharpSymbolLevel } from "./CSharpSymbolLevel";
-import { CSharpSymbolType } from './CSharpSymbolType';
+import { CSharpSymbolType } from "./CSharpSymbolType";
 import { CSharpType } from "./CSharpType";
-import { RegionGroup } from "../Models/RegionGroup";
 
 export class CSharpOrganizer {
-    static organizeFile(settings: CSharpenVSCodeExtensionSettings, file: CSharpFile): void {
+    public static organizeFile(settings: CSharpenVSCodeExtensionSettings, file: CSharpFile): void {
         file.children = CSharpOrganizer.organizeSymbols(settings, file.children, undefined);
     }
 

@@ -1,15 +1,25 @@
 ## β Beta
 
+#### 2025-03-16 — 0.5.5
+
+-   Added **Perform Quick Fixes** feature which, based on configurable Quick Fix title patterns, performs all Quick Fixes for the current file.
+    -   Added default Quick Fix title patterns.
+    -   Invoke by command (`Perform Quick Fixes`) or when _sharpening_ a file by setting `csharpen.performQuickFixesOnSharpen` to `true`. This is disabled by default.
+    -   Whether enabled or not, not invoked when processing all project files.
+-   Added setting (`csharpen.delayBeforeSharpeningFile`) to indicate delay in milliseconds before _sharpening_ file when processing all project files, which has a default value.
+-   Fixes issue with processing all project files when editor preview (`workbench.editor.enablePreview`) is enabled.
+-   Miscellaneous improvements and fixes.
+
 #### 2025-03-15 — 0.5.4
 
 -   Added Coding Style rule `csharpen.convertNonPrivateFieldsToProperties` which converts non-private fields to properties.
     -   To apply Coding Styles, use command: "Apply Coding Styles" or always apply when _sharpening_ by setting `csharpen.codingStylesEnabled` to `true`.
--   Added setting (`csharpen.delayBeforeDetectingFileDiagnostics`) to indicate delay in milliseconds before detecting file diagnostics (to help with detecting them), which has a default value.
+-   Added setting (`csharpen.delayBeforeDetectingFileDiagnostics`) to indicate delay in milliseconds before detecting File Diagnostics and Quick Fixes (to help with detecting them) when processing all project files, which has a default value.
 -   Changed extension logo.
 
 #### 2025-02-10 — 0.5.3
 
--   Added Coding Styles feature. Currently only one rule is available: `csharpen.useLanguageKeywordsInsteadOfFrameworkTypes`. This changes BCL/Framework types to language keywords on return and member types. Example: `System.String` to `string`, `Int32` to `int`, etc. More rules will be added in future versions.
+-   Added **Coding Styles** feature. Currently only one rule is available: `csharpen.useLanguageKeywordsInsteadOfFrameworkTypes`. This changes BCL/Framework types to language keywords on return and member types. Example: `System.String` to `string`, `Int32` to `int`, etc. More rules will be added in future versions.
     -   Use command: `Apply Coding Styles` or always apply when _sharpening_ by setting `csharpen.codingStylesEnabled` to `true`.
 
 #### 2025-02-09 — 0.5.2
@@ -23,7 +33,7 @@
 
 #### 2025-02-07 — 0.5.0
 
--   Added Symbol Renaming feature based on definable logic and patterns. This is disabled during removal of unused packages references. This can be enabled in settings (`csharpen.symbolRenamingEnabled` to enable on _sharpen_ and `csharpen.symbolRenaming` to define rules) and is disabled by default. Logic and patterns include: access modifier, member modifiers, symbol name pattern, return type pattern and symbol types. The renaming operation uses VS Code's built-in rename functionality thus all references in other files are renamed as well.
+-   Added **Symbol Renaming** feature based on definable logic and patterns. This is disabled during removal of unused packages references. This can be enabled in settings (`csharpen.symbolRenamingEnabled` to enable on _sharpen_ and `csharpen.symbolRenaming` to define rules) and is disabled by default. Logic and patterns include: access modifier, member modifiers, symbol name pattern, return type pattern and symbol types. The renaming operation uses VS Code's built-in rename functionality thus all references in other files are renamed as well.
     -   Example use case (and a default setting): All methods that (1) include a member modifier of `async`, (2) have a return type of `Task` or `ValueTask` (with or without generic type arguments) and (3) the symbol name does not end with `Async` are renamed to have a suffix of `Async`.
 -   Fixed issue with handling `event` symbols. (Side note: I've discovered that primary constructors and events are the hardest symbols to handle because of what the VS Code API provides, next would be delegates.)
 
@@ -68,7 +78,7 @@
 #### 2025-01-19 — 0.2.0
 
 -   Added ability to sharpen all files in a project.
--   Added ability to output file diagnostics for all files in a project.
+-   Added ability to output File Diagnostics for all files in a project.
 
 #### 2025-01-18 — 0.1.0
 

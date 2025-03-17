@@ -21,7 +21,7 @@ declare global {
         /** Trims trailing empty lines. */
         trimTrailingEmptyLines(): string;
     }
-};
+}
 
 String.prototype.equalsAny = function (values: string[], prefix = "", suffix = ""): string | undefined {
     return values.find(value => this === prefix + value + suffix);

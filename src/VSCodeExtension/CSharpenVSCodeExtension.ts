@@ -2,7 +2,6 @@
  * CSharpen — C# File Organizer VS Code extension
  * by Spencer James — https://swsj.me
  */
-
 import * as vscode from "vscode";
 
 import { CSharpAccessModifier } from "../CSharp/CSharpAccessModifier";
@@ -13,17 +12,17 @@ import { CSharpProjectPackageReference } from "../CSharp/CSharpProjectPackageRef
 import { CSharpSymbol } from "../CSharp/CSharpSymbol";
 import { CSharpSymbolType } from "../CSharp/CSharpSymbolType";
 import { AppliedCodingStyle } from "../Models/AppliedCodingStyle";
+import { DocumentSymbolCodeActions } from "../Models/DocumentSymbolCodeActions";
 import { FileDiagnostic, FileDiagnosticSeverity } from "../Models/FileDiagnostic";
 import { FileFilter, FileFilterStatus } from "../Models/FileFilter";
 import { ObjectResult } from "../Models/MessageResult";
+import { RenamedSymbol } from "../Models/RenamedSymbol";
+import { TextDocumentCodeActions } from "../Models/TextDocumentCodeActions";
 import { FileSystem } from "../Utils/FileSystem";
 import { CSharpenVSCodeExtensionSettings } from "./CSharpenVSCodeExtensionSettings";
 import { CSharpenWorkspaceSettings } from "./CSharpenWorkspaceSettings";
 import { VSCodeCommand } from "./VSCodeCommand";
 import { VSCodeExtension } from "./VSCodeExtension";
-import { RenamedSymbol } from "../Models/RenamedSymbol";
-import { TextDocumentCodeActions } from "../Models/TextDocumentCodeActions";
-import { DocumentSymbolCodeActions } from "../Models/DocumentSymbolCodeActions";
 
 export class CSharpenVSCodeExtension extends VSCodeExtension {
     constructor(context: vscode.ExtensionContext) {
@@ -34,6 +33,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             this.createCreateWorkspaceSettingsFileCommand(),
             this.createOutputFileDiagnosticsCommand(),
             this.createOutputFileDiagnosticsForProjectFilesCommand(),
+            this.createPerformQuickFixesCommand(),
             this.createRemoveUnusedReferencesCommand(),
             this.createRemoveUnusedUsingsCommand(),
             this.createRenameSymbolsInFileCommand(),
@@ -46,7 +46,44 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         return new CSharpenVSCodeExtension(context);
     }
 
-    private async applyCodingStylesToFile(settings: CSharpenVSCodeExtensionSettings, textEditor: vscode.TextEditor): Promise<ObjectResult<AppliedCodingStyle[]>> {
+    private static filterCodeActions(documentSymbolCodeActions: DocumentSymbolCodeActions, includeFilter: string[], excludeFilter: string[]): void {
+        if (includeFilter.length === 0 && excludeFilter.length === 0) return;
+
+        if (includeFilter.length > 0) {
+            documentSymbolCodeActions.codeActions = documentSymbolCodeActions.codeActions.filter(ca => includeFilter.some(f => ca.title.match(f) !== null));
+        }
+
+        if (excludeFilter.length > 0) {
+            documentSymbolCodeActions.codeActions = documentSymbolCodeActions.codeActions.filter(ca => !excludeFilter.some(f => ca.title.match(f) !== null));
+        }
+
+        documentSymbolCodeActions.children.forEach(c => this.filterCodeActions(c, includeFilter, excludeFilter));
+    }
+
+    private static async getDocumentSymbolQuickFixes(textDocument: vscode.TextDocument, documentSymbol: vscode.DocumentSymbol): Promise<DocumentSymbolCodeActions> {
+        const documentSymbolCodeActions = new DocumentSymbolCodeActions(documentSymbol, await vscode.commands.executeCommand("vscode.executeCodeActionProvider", textDocument.uri, documentSymbol.range, vscode.CodeActionKind.QuickFix.value) ?? []);
+        for (var ds of documentSymbol.children) documentSymbolCodeActions.children.push(await this.getDocumentSymbolQuickFixes(textDocument, ds));
+        return documentSymbolCodeActions;
+    }
+
+    private static getFileDiagnosticsUsingTextDocument(document: vscode.TextDocument): FileDiagnostic[] {
+        return vscode.languages.getDiagnostics(document.uri).map(d => new FileDiagnostic(FileSystem.fileNameUsingTextDocument(document), d));
+    }
+
+    private static async getTextDocumentQuickFixes(textDocument: vscode.TextDocument, includeFilter: string[], excludeFilter: string[]): Promise<TextDocumentCodeActions | undefined> {
+        const documentSymbols = await vscode.commands.executeCommand("vscode.executeDocumentSymbolProvider", textDocument.uri).then(symbols => symbols as vscode.DocumentSymbol[] || []);
+        if (documentSymbols.length === 0) return;
+
+        let textDocumentCodeActions = new TextDocumentCodeActions(textDocument);
+
+        for (var ds of documentSymbols) textDocumentCodeActions.children.push(await this.getDocumentSymbolQuickFixes(textDocument, ds));
+
+        for (var dsca of textDocumentCodeActions.children) this.filterCodeActions(dsca, includeFilter, excludeFilter);
+
+        return textDocumentCodeActions;
+    }
+
+    private async applyCodingStylesToFile(settings: CSharpenVSCodeExtensionSettings, textEditor: vscode.TextEditor, showMessage: boolean): Promise<ObjectResult<AppliedCodingStyle[]>> {
         if (!settings.codingStyles.anyEnabled) return ObjectResult.ok([], "No Coding Styles enabled.");
 
         const processFileResult = await settings.codingStyles.processFile(textEditor);
@@ -55,7 +92,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             processFileResult.object.forEach(cs => this.outputLine(cs.text(), true));
         }
 
-        await this.showMessage(processFileResult);
+        if (showMessage) await this.showMessage(processFileResult);
 
         return processFileResult;
     }
@@ -111,7 +148,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             }
 
             try {
-                await this.applyCodingStylesToFile(settings, textEditor);
+                await this.applyCodingStylesToFile(settings, textEditor, true);
             }
             catch (e: any) {
                 await this.error(`Error applying Coding Styles: ${e.message}`);
@@ -153,7 +190,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
             await FileSystem.writeFileAsync(workspaceSettingsFile, workSpaceSettings, true, false);
 
-            await vscode.workspace.openTextDocument(workspaceSettingsFile).then(doc => vscode.window.showTextDocument(doc));
+            await vscode.workspace.openTextDocument(workspaceSettingsFile).then(doc => vscode.window.showTextDocument(doc, { preview: false }));
         });
     }
 
@@ -165,16 +202,10 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             if (!textDocument) return;
 
             this.clearOutput();
+            this.showOutput();
+            const settings = CSharpenVSCodeExtensionSettings.shared(true);
 
-            this.outputTextDocumentCodeActions(await this.getTextDocumentCodeActions(textDocument));
-
-            const fileDiagnostics = CSharpFile.getFileDiagnosticsUsingTextDocument(textDocument);
-            if (fileDiagnostics.length === 0) {
-                await this.information("No diagnostics found.");
-                return;
-            }
-
-            this.outputFileDiagnostics(fileDiagnostics);
+            await this.outputDiagnosticsAndCodeActions(settings, textDocument, true);
         });
     }
 
@@ -191,7 +222,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             if (projects.length > 1) {
                 const quickPicked = await vscode.window.showQuickPick(
                     projects.map(p => p.relativePath),
-                    { placeHolder: "Select C# projects to output file diagnostics", canPickMany: true });
+                    { placeHolder: "Select C# projects to output File Diagnostics and Quick Fixes", canPickMany: true });
 
                 if (!quickPicked) return;
 
@@ -209,21 +240,103 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                 const fileUris = workspaceFiles.filter(f => f.path.includes(project.directory + "/")).sort((a, b) => a.path.localeCompare(b.path));
                 if (fileUris.length === 0) continue;
 
-                this.outputLine(`\n[Project: ${project.name}] Opening and outputting file diagnostics for ${fileUris.length} C# files...`);
+                this.outputLine(`\n[Project: ${project.name}]`);
 
-                for (const f of fileUris) {
+                this.outputLine(`Opening ${fileUris.length} C# files...`);
+
+                for await (const f of fileUris) {
                     const textDocument = await vscode.workspace.openTextDocument(f);
-                    // eslint-disable-next-line no-unused-vars
-                    const textEditor = await vscode.window.showTextDocument(textDocument);
+                    await vscode.window.showTextDocument(textDocument, { preview: false });
                 }
 
-                await new Promise(f => setTimeout(f, settings.delayBeforeRemovingUnusedUsingDirectives));
+                this.outputLine(`Outputting File Diagnostics and Quick Fixes for ${fileUris.length} C# files...`);
 
-                const fileDiagnosticsForProjectFiles = fileUris.flatMap(f => CSharpFile.getFileDiagnosticsUsingUri(f));
-                if (fileDiagnosticsForProjectFiles.length === 0) continue;
+                for await (const f of fileUris) {
+                    const textEditor = await vscode.window.showTextDocument(f, { preview: false });
 
-                this.outputFileDiagnostics(fileDiagnosticsForProjectFiles);
+                    await new Promise(f => setTimeout(f, settings.delayBeforeDetectingFileDiagnostics));
+
+                    await this.outputDiagnosticsAndCodeActions(settings, textEditor.document, false);
+                }
+
+                this.outputLine(`\nDone outputting File Diagnostics and Quick Fixes for project files.`);
             }
+
+            if (projects.length > 1) this.outputLine("\nDone outputting File Diagnostics and Quick Fixes for all projects.");
+        });
+    }
+
+    private createPerformQuickFixesCommand(): VSCodeCommand {
+        return new VSCodeCommand("kokoabim.csharpen.perform-quick-fixes", async (showMessage = true) => {
+            if (!await super.isWorkspaceReady()) { return; }
+
+            const textDocument = await this.getTextDocument();
+            if (!textDocument) return;
+
+            const settings = CSharpenVSCodeExtensionSettings.shared(true);
+            let isFirstLoop = true;
+
+            do {
+                const textDocumentCodeActions = await CSharpenVSCodeExtension.getTextDocumentQuickFixes(textDocument, settings.quickFixesToPerform, []);
+                if (!textDocumentCodeActions?.hasAny) {
+                    if (isFirstLoop) {
+                        if (showMessage) await this.information("No Quick Fixes found.");
+                        return;
+                    }
+                    else {
+                        break;
+                    }
+                }
+
+                const codeActions = textDocumentCodeActions.children.flatMap(dsca => dsca.codeActions).filter(ca => ca.command !== undefined);
+                if (codeActions.length === 0) {
+                    if (isFirstLoop) {
+                        if (showMessage) await this.information("No Quick Fixes found.");
+                        return;
+                    }
+                    else {
+                        break;
+                    }
+                }
+
+                if (isFirstLoop) {
+                    this.clearOutput();
+                    this.showOutput();
+                }
+
+                this.outputLine(`[Quick Fixes: ${codeActions.length}]`);
+
+                isFirstLoop = false;
+
+                for await (const qf of codeActions) {
+                    this.outputLine(qf.title);
+
+                    if (qf.edit) {
+                        this.outputLine(` Error: WorkspaceEdit with ${qf.edit.entries().length} entries. Not supported yet.`);
+                        continue;
+                    }
+
+                    if (qf.command!.arguments?.length !== 1) {
+                        this.outputLine(` Error: Command arguments length is not 1.`);
+                        continue;
+                    }
+
+                    const commandArguments = qf.command!.arguments[0];
+                    commandArguments.FixAllFlavors = ['Document'];
+
+                    try {
+                        await vscode.commands.executeCommand(qf.command!.command, commandArguments);
+                    }
+                    catch (e: any) {
+                        this.outputLine(` Error: ${e.message}`);
+                    }
+
+                    break; // since the document has been modified, restart the do-while loop
+                }
+            }
+            while (true);
+
+            this.outputLine("No more Quick Fixes found.");
         });
     }
 
@@ -272,7 +385,8 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             const textEditor = await this.getTextEditor();
             if (!textEditor) return;
 
-            const removedCount = await CSharpFile.removeUnusedUsings(textEditor);
+            const fileDiagnostics = CSharpenVSCodeExtension.getFileDiagnosticsUsingTextDocument(textEditor.document);
+            const removedCount = await CSharpFile.removeUnusedUsings(textEditor, fileDiagnostics);
 
             if (removedCount) await this.information(`Removed ${removedCount} unused using directives.`);
             else await this.information("No unused using directives found.");
@@ -338,7 +452,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
             const settings = CSharpenVSCodeExtensionSettings.shared(true);
 
-            const fileDiagnostics = CSharpFile.getFileDiagnosticsUsingTextDocument(textEditor.document);
+            const fileDiagnostics = CSharpenVSCodeExtension.getFileDiagnosticsUsingTextDocument(textEditor.document);
             const fileDiagErrors = fileDiagnostics.filter(d => d.severity === FileDiagnosticSeverity.Error);
             if (fileDiagErrors.length > 0) {
                 this.outputFileDiagnostics(fileDiagErrors);
@@ -347,7 +461,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                     const result = await vscode.window.showWarningMessage("File contains diagnostic errors. Continue sharpening?",
                         {
                             modal: true,
-                            detail: "Sharpening may not work as expected with file diagnostic errors. If 'Always' is selected, this warning will not be shown again and can be re-enabled in settings.",
+                            detail: "Sharpening may not work as expected with File Diagnostic errors. If 'Always' is selected, this warning will not be shown again and can be re-enabled in settings.",
                         },
                         "Once", "Always");
 
@@ -359,7 +473,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                     }
                 }
                 else {
-                    await vscode.window.showWarningMessage("File contains diagnostic errors though sharpening is allowed. This can be adjusted in settings.");
+                    await vscode.window.showWarningMessage("File contains File Diagnostic errors though sharpening is allowed. This can be adjusted in settings.");
                 }
             }
 
@@ -404,7 +518,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             if (projects.length > 1) {
                 const quickPicked = await vscode.window.showQuickPick(
                     projects.map(p => p.relativePath),
-                    { placeHolder: "Select C# projects to output file diagnostics", canPickMany: true });
+                    { placeHolder: "Select C# projects to sharpen files", canPickMany: true });
 
                 if (!quickPicked) return;
 
@@ -421,6 +535,8 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                 },
                 "Yes", "No"))) return;
 
+            const settings = CSharpenVSCodeExtensionSettings.shared(true);
+
             this.clearOutput();
             this.showOutput();
 
@@ -430,73 +546,69 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
                 for await (const fileUri of fileUris) {
                     const textDocument = await vscode.workspace.openTextDocument(fileUri);
-                    // eslint-disable-next-line no-unused-vars
-                    const textEditor = await vscode.window.showTextDocument(textDocument);
+                    await vscode.window.showTextDocument(textDocument, { preview: false });
+                    await new Promise(f => setTimeout(f, settings.delayBeforeSharpeningFile));
                     await vscode.commands.executeCommand("kokoabim.csharpen.sharpen-file");
                 }
             }
         });
     }
 
-    private filterCodeActions(documentSymbolCodeActions: DocumentSymbolCodeActions, filters: string[]): void {
-        documentSymbolCodeActions.codeActions = documentSymbolCodeActions.codeActions.filter(ca => !filters.some(f => ca.title.match(f) !== null));
-        documentSymbolCodeActions.children.forEach(c => this.filterCodeActions(c, filters));
+    private async outputDiagnosticsAndCodeActions(settings: CSharpenVSCodeExtensionSettings, textDocument: vscode.TextDocument, showMessage: boolean): Promise<void> {
+        const fileDiagnostics = CSharpenVSCodeExtension.getFileDiagnosticsUsingTextDocument(textDocument);
+        const quickFixes = await CSharpenVSCodeExtension.getTextDocumentQuickFixes(textDocument, [], settings.quickFixFilters);
+
+        if (fileDiagnostics.length === 0 && quickFixes?.hasAny !== true) {
+            if (showMessage) await this.information("No File Diagnostics or Quick Fixes.");
+            return;
+        }
+
+        this.outputLine(`\n[${FileSystem.fileNameUsingTextDocument(textDocument)}]`, true);
+
+        if (fileDiagnostics.length > 0) {
+            this.outputLine(`[File Diagnostics: ${fileDiagnostics.length}]`);
+            this.outputFileDiagnostics(fileDiagnostics);
+        }
+
+        if (quickFixes?.hasAny) {
+            this.outputLine(`[Quick Fixes: ${quickFixes.count}]`);
+            this.outputFileCodeActions(quickFixes);
+        }
     }
 
-    private async getDocumentSymbolCodeActions(textDocument: vscode.TextDocument, documentSymbol: vscode.DocumentSymbol): Promise<DocumentSymbolCodeActions> {
-        const documentSymbolCodeActions = new DocumentSymbolCodeActions(documentSymbol, await vscode.commands.executeCommand<vscode.CodeAction[]>("vscode.executeCodeActionProvider", textDocument.uri, documentSymbol.range, vscode.CodeActionKind.QuickFix.value) ?? []);
-        for (var ds of documentSymbol.children) documentSymbolCodeActions.children.push(await this.getDocumentSymbolCodeActions(textDocument, ds));
-        return documentSymbolCodeActions;
-    }
-
-    private async getTextDocumentCodeActions(textDocument: vscode.TextDocument): Promise<TextDocumentCodeActions | undefined> {
-        const documentSymbols = await vscode.commands.executeCommand("vscode.executeDocumentSymbolProvider", textDocument.uri).then(symbols => symbols as vscode.DocumentSymbol[] || []);
-        if (documentSymbols.length === 0) return;
-
-        let textDocumentCodeActions = new TextDocumentCodeActions(textDocument);
-        for (var ds of documentSymbols) textDocumentCodeActions.children.push(await this.getDocumentSymbolCodeActions(textDocument, ds));
-
-        const settings = CSharpenVSCodeExtensionSettings.shared(true);
-        for (var dsca of textDocumentCodeActions.children) this.filterCodeActions(dsca, settings.quickFixFilters); // dsca.codeActions = dsca.codeActions.filter(ca => !settings.quickFixFilters.some(qff => ca.title.match(qff) !== null));
-
-        return textDocumentCodeActions;
-    }
-
-    private outputDocumentSymbolCodeActions(documentSymbolCodeActions: DocumentSymbolCodeActions, indent: string): void {
+    private outputDocumentSymbolCodeActions(parentSymbolDetail: string, documentSymbolCodeActions: DocumentSymbolCodeActions): void {
         if (documentSymbolCodeActions.codeActions.length === 0 && documentSymbolCodeActions.children.length === 0) return;
 
-        this.outputLine(`${indent}${documentSymbolCodeActions.documentSymbol.detail}`);
-        for (var ca of documentSymbolCodeActions.codeActions) this.outputLine(`${indent}- ${ca.title}`);
-        documentSymbolCodeActions.children.forEach(c => this.outputDocumentSymbolCodeActions(c, indent + "  "));
+        const symbolDetail = `${parentSymbolDetail}.${documentSymbolCodeActions.documentSymbol.detail}`;
+
+        if (documentSymbolCodeActions.codeActions.length > 0) {
+            this.outputLine(`${symbolDetail}: ${documentSymbolCodeActions.codeActions.map(ca => ca.title).join(", ")}`);
+        }
+
+        if (documentSymbolCodeActions.children.length > 0) {
+            documentSymbolCodeActions.children.forEach(c => this.outputDocumentSymbolCodeActions(symbolDetail, c));
+        }
+    }
+
+    private outputFileCodeActions(textDocumentCodeActions?: TextDocumentCodeActions): void {
+        if (!textDocumentCodeActions?.hasAny) return;
+
+        for (var dsca of textDocumentCodeActions.children) {
+            if (!dsca.hasAny) continue;
+
+            if (dsca.codeActions.length > 0) {
+                this.outputLine(`${dsca.documentSymbol.detail}: ${dsca.codeActions.map(ca => ca.title).join(", ")}`);
+            }
+
+            if (dsca.children.length > 0) {
+                dsca.children.forEach(c => this.outputDocumentSymbolCodeActions(dsca.documentSymbol.detail, c));
+            }
+        }
     }
 
     private outputFileDiagnostics(fileDiagnostics: FileDiagnostic[]): void {
         if (fileDiagnostics.length === 0) return;
-
-        let previousPath = "";
-
-        fileDiagnostics.forEach(fd => {
-            if (previousPath !== fd.path) {
-                previousPath = fd.path;
-                this.outputLine(`\n[${fd.path}]`, true);
-            }
-
-            this.outputLine(fd.toString());
-        });
-    }
-
-    private outputTextDocumentCodeActions(textDocumentCodeActions?: TextDocumentCodeActions): void {
-        if (!textDocumentCodeActions?.hasAny) return;
-
-        this.outputLine(`[${FileSystem.fileNameUsingTextDocument(textDocumentCodeActions.textDocument)}] Quick Fixes:`, true);
-        for (var dsca of textDocumentCodeActions.children) {
-            if (!dsca.hasAny) continue;
-
-            this.outputLine(`${dsca.documentSymbol.detail} {`);
-            for (var ca of dsca.codeActions) this.outputLine(`- ${ca.title}`);
-            dsca.children.forEach(c => this.outputDocumentSymbolCodeActions(c, "  "));
-            this.outputLine(`}`);
-        }
+        fileDiagnostics.forEach(fd => this.outputLine(fd.toString()));
     }
 
     private async removeUnusedReferences(projects: CSharpProjectFile[], settings: CSharpenVSCodeExtensionSettings): Promise<void> {
@@ -578,14 +690,15 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
                         if (await isAutoGeneratedFileAndContinue(textDocument)) continue; // fileUri for-loop
 
-                        const textEditor = await vscode.window.showTextDocument(textDocument);
+                        const textEditor = await vscode.window.showTextDocument(textDocument, { preview: false });
 
                         await new Promise(f => setTimeout(f, settings.delayBeforeRemovingUnusedUsingDirectives));
 
                         let removedUnusedUsingsFromFileCount = 0;
 
                         if (removeUnusedUsings && !sharpenFiles) {
-                            removedUnusedUsingsFromFileCount = await CSharpFile.removeUnusedUsings(textEditor);
+                            const fileDiagnostics = CSharpenVSCodeExtension.getFileDiagnosticsUsingTextDocument(textEditor.document);
+                            removedUnusedUsingsFromFileCount = await CSharpFile.removeUnusedUsings(textEditor, fileDiagnostics);
                         }
                         else if (sharpenFiles) {
                             // eslint-disable-next-line no-unused-vars
@@ -634,7 +747,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
                         if (await isAutoGeneratedFileAndContinue(textDocument)) continue; // fileUri for-loop
 
-                        await vscode.window.showTextDocument(textDocument);
+                        await vscode.window.showTextDocument(textDocument, { preview: false });
                     }
 
                     if (abortingOrDidCancel) break; // project for-loop
@@ -845,11 +958,19 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
         // --- remove unused usings ---
 
-        const removedUnusedUsingsCount = settings.removeUnusedUsingsOnSharpen ? await CSharpFile.removeUnusedUsings(textEditor) : 0;
+        let removedUnusedUsingsCount = 0;
+        if (settings.removeUnusedUsingsOnSharpen) {
+            const fileDiagnostics = CSharpenVSCodeExtension.getFileDiagnosticsUsingTextDocument(textEditor.document);
+            removedUnusedUsingsCount = settings.removeUnusedUsingsOnSharpen ? await CSharpFile.removeUnusedUsings(textEditor, fileDiagnostics) : 0;
+        }
 
         // --- coding styles ---
 
-        if (!batchProcessing && settings.codingStylesEnabled && settings.codingStyles.anyEnabled) await this.applyCodingStylesToFile(settings, textEditor);
+        if (!batchProcessing && settings.codingStylesEnabled && settings.codingStyles.anyEnabled) await this.applyCodingStylesToFile(settings, textEditor, false);
+
+        // --- quick fixes ---
+
+        if (!batchProcessing && settings.performQuickFixesOnSharpen) await vscode.commands.executeCommand('kokoabim.csharpen.perform-quick-fixes', false);
 
         // --- sharpen ---
 
