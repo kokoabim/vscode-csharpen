@@ -6,8 +6,7 @@
         "outDir": "dist",
         "strict": true,
         "esModuleInterop": true,
-        "noImplicitReturns": true,
-        "noUnusedParameters": false,
+        "forceConsistentCasingInFileNames": true,
         "sourceMap": true
     },
     "include": [

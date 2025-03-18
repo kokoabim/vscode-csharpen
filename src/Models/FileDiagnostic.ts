@@ -28,7 +28,7 @@ export class FileDiagnostic {
         }
     }
 
-    public get severityText() { return vscode.DiagnosticSeverity[this.severity]; }
+    public get severityText(): string { return vscode.DiagnosticSeverity[this.severity]; }
 
     public toString(): string {
         let additionalInfo = "";

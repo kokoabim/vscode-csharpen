@@ -479,7 +479,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
             const documentText = textEditor.document.getText();
 
-            // eslint-disable-next-line no-unused-vars
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const [sharpened, removedUnusedUsingsCount, symbolsRenamed, didError, sharpenError] = await this.sharpenFile(settings, textEditor, documentText);
             if (!sharpened || didError) return;
 
@@ -637,7 +637,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             this.clearOutput();
             this.showOutput();
 
-            const reportProgress = (message: string, incrementPackageReferenceProcessed = false) => {
+            const reportProgress = (message: string, incrementPackageReferenceProcessed = false): void => {
                 process.report({ message: message, increment: incrementPackageReferenceProcessed ? packageReferenceProcessedIncrementSize : undefined });
             };
 
@@ -658,7 +658,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                 }
             };
 
-            const isCancellationRequested = () => {
+            const isCancellationRequested = (): boolean => {
                 if (token.isCancellationRequested) {
                     this.outputLine(`\nCancelled 🚫`);
                     abortingOrDidCancel = true;
@@ -701,7 +701,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                             removedUnusedUsingsFromFileCount = await CSharpFile.removeUnusedUsings(textEditor, fileDiagnostics);
                         }
                         else if (sharpenFiles) {
-                            // eslint-disable-next-line no-unused-vars
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
                             const [sharpened, removedUnusedUsingsCount, symbolsRenamedCount, didError, sharpenError] = await this.sharpenFile(settings, textEditor, textDocument.getText(), true);
 
                             if (didError) {

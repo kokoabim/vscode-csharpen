@@ -254,7 +254,7 @@ export class CSharpSymbol {
         let endIndex = 0;
 
         if (symbol.type === CSharpSymbolType.primaryConstructor) {
-            // eslint-disable-next-line no-unused-vars
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const [parametersText, parametersRange] = CSharpSymbol.parseParameters(textDocument, documentSymbol!, symbol);
             return new vscode.Range(textDocument.positionAt(startIndex), parametersRange.end);
         }
@@ -737,7 +737,7 @@ export class CSharpSymbol {
             possibleAssignmentStartPosition = symbol.documentSymbol.selectionRange.end;
         }
 
-        // eslint-disable-next-line no-unused-vars
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const [valuePosition, matchedValue] = CSharpSymbol.getCharacterPosition(textDocument, possibleAssignmentStartPosition, ["="], symbol.range!.end, true, 1);
         if (valuePosition === undefined) return;
 

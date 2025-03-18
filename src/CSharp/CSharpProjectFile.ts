@@ -56,7 +56,7 @@ export class CSharpProjectFile {
     public async buildAsync(outputChannel: vscode.OutputChannel, prefix = "", showFilePath = true): Promise<boolean> {
         outputChannel.append(`${prefix}${showFilePath ? `[Project: ${this.name}] ` : ""}Building project...`);
 
-        // eslint-disable-next-line no-unused-vars
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const [dotNetBuildExitCode, dotNetBuildOutput] = await Executor.execToString(`dotnet build -v m "${this.filePath}"`, this.directory);
         if (dotNetBuildExitCode === 0) {
             outputChannel.appendLine(" succeeded");
@@ -76,7 +76,7 @@ export class CSharpProjectFile {
 
         outputChannel.append(`${prefix}${showFilePath ? `[Solution: ${basename(this.solutionFilePath, ".sln")}] ` : ""}Building solution...`);
 
-        // eslint-disable-next-line no-unused-vars
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const [dotNetBuildExitCode, dotNetBuildOutput] = await Executor.execToString(`dotnet build -v m "${this.solutionFilePath}"`, this.workspaceFolder!);
         if (dotNetBuildExitCode === 0) {
             outputChannel.appendLine(` succeeded`);
@@ -114,7 +114,7 @@ export class CSharpProjectFile {
             return false;
         }
 
-        // eslint-disable-next-line no-unused-vars
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const [dotNetRemoveExitCode, dotNetRemoveOutput] = await Executor.execToString(`dotnet remove "${this.filePath}" package ${reference.name}`, this.directory);
         if (dotNetRemoveExitCode !== 0) {
             outputChannel.appendLine(" failed ❌");
@@ -136,7 +136,7 @@ export class CSharpProjectFile {
         }
 
         outputChannel.append(" - Re-adding package reference...");
-        // eslint-disable-next-line no-unused-vars
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const [dotNetAddExitCode, dotNetAddOutput] = await Executor.execToString(`dotnet add "${this.filePath}" package ${reference.name} --version ${reference.version}`, this.directory);
         if (dotNetAddExitCode === 0) outputChannel.appendLine(" succeeded");
         else outputChannel.appendLine(" failed ❌");
@@ -153,7 +153,7 @@ export class CSharpProjectFile {
             return false;
         }
 
-        // eslint-disable-next-line no-unused-vars
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const [dotNetRemoveExitCode, dotNetRemoveOutput] = await Executor.execToString(`dotnet remove "${this.filePath}" reference "${reference.path}"`, this.directory);
         if (dotNetRemoveExitCode !== 0) {
             outputChannel.appendLine(" failed ❌");
@@ -175,7 +175,7 @@ export class CSharpProjectFile {
         }
 
         outputChannel.append(" - Re-adding project reference...");
-        // eslint-disable-next-line no-unused-vars
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const [dotNetAddExitCode, dotNetAddOutput] = await Executor.execToString(`dotnet add "${this.filePath}" reference "${reference.path}"`, this.directory);
         if (dotNetAddExitCode === 0) outputChannel.appendLine(" succeeded");
         else outputChannel.appendLine(" failed ❌");

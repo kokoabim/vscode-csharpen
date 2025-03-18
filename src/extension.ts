@@ -6,8 +6,8 @@
 import * as vscode from "vscode";
 import { CSharpenVSCodeExtension } from "./VSCodeExtension/CSharpenVSCodeExtension";
 
-export function activate(context: vscode.ExtensionContext) {
+export function activate(context: vscode.ExtensionContext): void {
     CSharpenVSCodeExtension.use(context);
 }
 
-export function deactivate() { }
+export function deactivate(): void { }

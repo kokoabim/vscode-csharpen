@@ -10,7 +10,7 @@ export class FileFilter {
         Object.assign(this, init);
     }
 
-    public get ignoredReason() { return this.reason ? this.reason : `File filter: ${this.name}`; }
+    public get ignoredReason(): string { return this.reason ? this.reason : `File filter: ${this.name}`; }
 
     public static checkAll(fileName: string, content: string, fileFilters: FileFilter[]): [FileFilterStatus, string | undefined] {
         for (const ff of fileFilters) {

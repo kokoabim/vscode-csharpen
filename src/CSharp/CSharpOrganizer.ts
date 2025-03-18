@@ -226,7 +226,7 @@ export class CSharpOrganizer {
 
         if (parentHasRegionGroups) parent.regions.groups.forEach(g => symbols.push(...g.symbols));
 
-        function closeOrRemoveRegion(organization: CSharpOrganizeSettings) {
+        function closeOrRemoveRegion(organization: CSharpOrganizeSettings): void {
             if (regionalizedSymbolsCount > organization.regionThreshold) {
                 previousSymbol!.regions.end = "";
             }
@@ -276,7 +276,7 @@ export class CSharpOrganizer {
         return undefined;
     }
 
-    private static toOrganizedMaps(organizeSettings: CSharpOrganizeSettings, symbols: CSharpSymbol[]) {
+    private static toOrganizedMaps(organizeSettings: CSharpOrganizeSettings, symbols: CSharpSymbol[]): Map<any, any> | undefined {
         let orderingMaps: Map<any, any> | undefined = undefined;
         for (let i = 0; i < organizeSettings.ordering.length; i++) {
             const order = organizeSettings.ordering[i];

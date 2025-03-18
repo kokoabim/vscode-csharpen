@@ -44,7 +44,7 @@ export abstract class VSCodeExtension {
                 }
             }
         }
-        // eslint-disable-next-line no-unused-vars
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         catch (e) { }
 
         if (showWarningMessage) { this.warning("No document opened or selected."); }
