@@ -916,14 +916,12 @@
         }
     },
     "scripts": {
-        "build": "npm install && tsc -p ./",
-        "clean": "./clean.sh -y",
         "compile": "tsc -p ./",
-        "lint": "eslint src",
-        "pretest": "npm install && npm run compile && npm run lint",
-        "rebuild": "./clean.sh -iy && npm run compile",
+        "install-compile": "./npmx.sh -bcy install",
+        "lint": "eslint ./src",
+        "pretest": "./npmx.sh -cly install",
         "test": "vscode-test",
-        "vscode:prepublish": "npm run rebuild && npm prune --omit=dev",
+        "vscode:prepublish": "./npmx.sh -y prepublish",
         "watch": "tsc -watch -p ./"
     },
     "devDependencies": {

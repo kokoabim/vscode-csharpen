@@ -3,7 +3,8 @@
         "module": "CommonJS",
         "target": "ES2022",
         "lib": [
-            "ES2022"
+            "ES2022",
+            "DOM"
         ],
         "rootDir": "src",
         "outDir": "dist",
@@ -12,7 +13,7 @@
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true,
         "noFallthroughCasesInSwitch": true,
-        "noImplicitAny": false,
+        "noImplicitAny":false,
         "noImplicitReturns": true,
         "noUnusedParameters": false,
         "sourceMap": true,
@@ -27,6 +28,7 @@
     "exclude": [
         "./.vscode-test",
         "./dist",
-        "./node_modules"
+        "./node_modules",
+        "./src/test",
     ],
 }

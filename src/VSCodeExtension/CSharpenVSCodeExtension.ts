@@ -74,7 +74,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         const documentSymbols = await vscode.commands.executeCommand("vscode.executeDocumentSymbolProvider", textDocument.uri).then(symbols => symbols as vscode.DocumentSymbol[] || []);
         if (documentSymbols.length === 0) return;
 
-        let textDocumentCodeActions = new TextDocumentCodeActions(textDocument);
+        const textDocumentCodeActions = new TextDocumentCodeActions(textDocument);
 
         for (var ds of documentSymbols) textDocumentCodeActions.children.push(await this.getDocumentSymbolQuickFixes(textDocument, ds));
 

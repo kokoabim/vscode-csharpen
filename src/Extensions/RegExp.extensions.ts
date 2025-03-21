@@ -11,7 +11,7 @@ RegExp.prototype.matchGroupValues = function (input: string, groupName: string):
 
 RegExp.prototype.matches = function (input: string): RegExpExecArray[] {
     this.lastIndex = 0;
-    let matches: RegExpExecArray[] = [];
+    const matches: RegExpExecArray[] = [];
     let match: RegExpExecArray | null;
     while ((match = this.exec(input)) !== null) {
         matches.push(match);

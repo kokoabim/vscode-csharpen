@@ -196,9 +196,11 @@ export class CSharpSymbol {
         let usingSymbols: CSharpSymbol[];
         let namespaceSymbols: CSharpSymbol[];
 
-        let enforceFileScopedNamespace = CSharpenVSCodeExtensionSettings.shared().enforceFileScopedNamespaces && symbols.every(s => s.namespace === symbols[0].namespace);
+        const enforceFileScopedNamespace = CSharpenVSCodeExtensionSettings.shared().enforceFileScopedNamespaces && symbols.every(s => s.namespace === symbols[0].namespace);
 
+        // eslint-disable-next-line prefer-const
         [usingSymbols, strippedDocumentText] = CSharpSymbol.createUsingDirectives(textDocument, strippedDocumentText);
+        // eslint-disable-next-line prefer-const
         [namespaceSymbols, strippedDocumentText] = CSharpSymbol.createNamespaceDeclarations(textDocument, strippedDocumentText, enforceFileScopedNamespace);
 
         return CSharpSymbol.orderByPosition(usingSymbols.concat(namespaceSymbols));
@@ -741,8 +743,8 @@ export class CSharpSymbol {
         const [valuePosition, matchedValue] = CSharpSymbol.getCharacterPosition(textDocument, possibleAssignmentStartPosition, ["="], symbol.range!.end, true, 1);
         if (valuePosition === undefined) return;
 
-        let assignmentRange = new vscode.Range(valuePosition, symbol.range!.end);
-        let assignment = textDocument.getText(assignmentRange);
+        const assignmentRange = new vscode.Range(valuePosition, symbol.range!.end);
+        const assignment = textDocument.getText(assignmentRange);
 
         if (!assignment.endsWith(";")) return; // TODO: remove after properties are handled
 

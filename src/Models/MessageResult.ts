@@ -37,11 +37,11 @@ export class ObjectResult<T> extends MessageResult {
         this.object = object;
     }
 
-    public static error<T>(message?: string, object?: T): ObjectResult<T> {
+    public static override error<T>(message?: string, object?: T): ObjectResult<T> {
         return new ObjectResult(false, object, message, LogLevel.Error);
     }
 
-    public static ok<T>(object?: T, message?: string): ObjectResult<T> {
+    public static override ok<T>(object?: T, message?: string): ObjectResult<T> {
         return new ObjectResult(true, object, message);
     }
 }
