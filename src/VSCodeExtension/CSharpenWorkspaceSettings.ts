@@ -58,12 +58,10 @@ export class CSharpenWorkspaceSettings {
     }
 
     private static async readFileAsJsonAsync(filePath: string): Promise<any> {
-        return new Promise<string>(async (resolve, reject) => {
-            await fs.readFile(filePath).then(data => {
-                resolve(JSON.parse(Buffer.from(<Uint8Array>data).toString("utf8")));
-            }, err => {
-                reject(err);
-            });
+        return await fs.readFile(filePath).then(data => {
+            return JSON.parse(Buffer.from(<Uint8Array>data).toString("utf8"));
+        }).catch(() => {
+            return undefined;
         });
     }
 }

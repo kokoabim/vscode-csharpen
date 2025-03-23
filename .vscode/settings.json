@@ -27,10 +27,11 @@
         "Cloneable",
         "csharpen",
         "Formattable",
+        "NOSONAR",
         "Regionalizable",
         "regionalization",
         "regionalize",
         "regionalized",
         "regionalizing"
-    ]
+    ],
 }

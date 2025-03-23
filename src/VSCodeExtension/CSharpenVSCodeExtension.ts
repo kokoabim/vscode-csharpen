@@ -2,6 +2,7 @@
  * CSharpen — C# File Organizer VS Code extension
  * by Spencer James — https://swsj.me
  */
+
 import * as vscode from "vscode";
 
 import { CSharpAccessModifier } from "../CSharp/CSharpAccessModifier";
@@ -76,9 +77,9 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
         const textDocumentCodeActions = new TextDocumentCodeActions(textDocument);
 
-        for (var ds of documentSymbols) textDocumentCodeActions.children.push(await this.getDocumentSymbolQuickFixes(textDocument, ds));
+        for (const ds of documentSymbols) textDocumentCodeActions.children.push(await this.getDocumentSymbolQuickFixes(textDocument, ds));
 
-        for (var dsca of textDocumentCodeActions.children) this.filterCodeActions(dsca, includeFilter, excludeFilter);
+        for (const dsca of textDocumentCodeActions.children) this.filterCodeActions(dsca, includeFilter, excludeFilter);
 
         return textDocumentCodeActions;
     }
@@ -136,7 +137,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
     private createApplyCodingStyleToFileCommand(): VSCodeCommand {
         return new VSCodeCommand("kokoabim.csharpen.apply-coding-styles-to-file", async () => {
-            if (!super.isWorkspaceReady()) return;
+            if (!await this.isWorkspaceReady()) return;
 
             const textEditor = await this.getTextEditor();
             if (!textEditor) return;
@@ -158,7 +159,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
     private createCreateWorkspaceSettingsFileCommand(): VSCodeCommand {
         return new VSCodeCommand("kokoabim.csharpen.create-workspace-settings-file", async () => {
-            if (!this.isWorkspaceReady()) return;
+            if (!await this.isWorkspaceReady()) return;
 
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
             if (!workspaceFolder) return;
@@ -380,7 +381,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
     private createRemoveUnusedUsingsCommand(): VSCodeCommand {
         return new VSCodeCommand("kokoabim.csharpen.remove-unused-usings", async () => {
-            if (!super.isWorkspaceReady()) return;
+            if (!await super.isWorkspaceReady()) return;
 
             const textEditor = await this.getTextEditor();
             if (!textEditor) return;
@@ -395,7 +396,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
     private createRenameSymbolsInFileCommand(): VSCodeCommand {
         return new VSCodeCommand("kokoabim.csharpen.rename-symbols-in-file", async () => {
-            if (!super.isWorkspaceReady()) return;
+            if (!await super.isWorkspaceReady()) return;
 
             const textEditor = await this.getTextEditor();
             if (!textEditor) return;
@@ -702,7 +703,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                         }
                         else if (sharpenFiles) {
                             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                            const [sharpened, removedUnusedUsingsCount, symbolsRenamedCount, didError, sharpenError] = await this.sharpenFile(settings, textEditor, textDocument.getText(), true);
+                            const [sharpened, removedUnusedUsingsCount, symbolsRenamedCount, didError, sharpenError] = await this.sharpenFile(settings, textEditor, textDocument.getText(), true); // NOSONAR
 
                             if (didError) {
                                 if (!await askToContinueOnWarning(`Sharpening failed. You may address the failure now then continue.\n\n${sharpenError}`)) {
