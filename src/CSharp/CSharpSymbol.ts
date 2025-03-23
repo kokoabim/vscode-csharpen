@@ -1,10 +1,7 @@
 import * as vscode from "vscode";
-
 import util from "node:util";
-
 import "../Extensions/Array.extensions";
 import "../Extensions/String.extensions";
-
 import { RegionGroup } from "../Models/RegionGroup";
 import { StringSpan } from "../Models/StringSpan";
 import { StringBuilder } from "../Utils/StringBuilder";

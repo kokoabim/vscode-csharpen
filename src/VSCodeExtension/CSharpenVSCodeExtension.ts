@@ -2,9 +2,7 @@
  * CSharpen — C# File Organizer VS Code extension
  * by Spencer James — https://swsj.me
  */
-
 import * as vscode from "vscode";
-
 import { CSharpAccessModifier } from "../CSharp/CSharpAccessModifier";
 import { CSharpFile } from "../CSharp/CSharpFile";
 import { CSharpOrganizer } from "../CSharp/CSharpOrganizer";

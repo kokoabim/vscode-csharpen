@@ -1,9 +1,6 @@
 import * as vscode from "vscode";
-
 import util from "node:util";
-
 import "../Extensions/Array.extensions";
-
 import { FileDiagnostic, FileDiagnosticIdentifier } from "../Models/FileDiagnostic";
 import { FileSystem } from "../Utils/FileSystem";
 import { CSharpSymbol } from "./CSharpSymbol";
