@@ -1,5 +1,12 @@
 import * as vscode from "vscode";
 
+export enum FileDiagnosticSeverity {
+    Error = 0,
+    Warning = 1,
+    Information = 2,
+    Hint = 3
+}
+
 export class FileDiagnostic {
     public readonly identifier?: string;
     public readonly info?: string;
@@ -43,11 +50,4 @@ export class FileDiagnostic {
 export class FileDiagnosticIdentifier {
     public static readonly useGeneratedRegexAttributeToGenerateRegExpAtCompileTime = "SYSLIB1045";
     public static readonly usingDirectiveUnnecessary = "IDE0005";
-}
-
-export enum FileDiagnosticSeverity {
-    Error = 0,
-    Warning = 1,
-    Information = 2,
-    Hint = 3
 }

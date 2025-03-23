@@ -1,3 +1,9 @@
+export enum FileFilterStatus {
+    allow,
+    deny,
+    confirm
+}
+
 export class FileFilter {
     public confirmOnDeny = false;
     public fileName?: string;
@@ -34,10 +40,4 @@ export class FileFilter {
     private patternLogicMatchesContent(content: string): boolean {
         return this.pattern !== undefined && !!content.match(this.pattern) === this.matchLogic;
     }
-}
-
-export enum FileFilterStatus {
-    allow,
-    deny,
-    confirm
 }

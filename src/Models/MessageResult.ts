@@ -29,13 +29,13 @@ export class MessageResult {
 export class ObjectResult<T> extends MessageResult {
     public readonly object: T | undefined;
 
-    public get successWithObject(): boolean { return this.success && this.object !== undefined; }
-
     constructor(success: boolean, object?: T, message?: string, level?: LogLevel) {
         super(success, message, level);
 
         this.object = object;
     }
+
+    public get successWithObject(): boolean { return this.success && this.object !== undefined; }
 
     public static override error<T>(message?: string, object?: T): ObjectResult<T> {
         return new ObjectResult(false, object, message, LogLevel.Error);
