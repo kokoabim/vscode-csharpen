@@ -29,9 +29,9 @@
 set -eo pipefail
 
 script_name="${0##*/}"
-script_ver="1.0"
+script_ver="1.0.1"
 script_title="NPM Tasks"
-script_switches=bchly
+script_switches="bclhy"
 
 function usage() {
     end "$script_title (v$script_ver)
@@ -42,17 +42,18 @@ Use: $script_name [-bcl] clean|install
      $script_name update
 
 Actions:
- clean|c       Remove some build data$(text_red '†') and clean-install packages (npm-ci)
- install|i     Perform data action and install packages (npm-install)
- prepublish|p  Perform install action (dev dependencies omitted) and compile (tsc)
+ clean|e       Remove some build data$(text_red '†') and clean-install NPM dependencies (npm-ci)
+ compile|c     Compile only (tsc)
+ install|i     Perform remove action and install NPM dependencies (npm-install)
+ prepublish|p  Perform remove action, install NPM dependencies (npm-install; dev dependencies omitted) and compile for publish (tsc)
  remove|r      Remove build data$(text_red '*')
- update|u      Update packages except for '@types/((node)|(vscode))' and major versions (npm-update)
+ update|u      Update NPM dependencies except for '@types/((node)|(vscode))' and major versions (npm-update)
 
 Switches:
  -b  Do not remove build data
- -c  Compile after install (tsc)
+ -c  Compile after install NPM dependencies (tsc)
  -h  View this help
- -l  Run ESLint after install (eslint)
+ -l  Run ESLint after install NPM dependencies (eslint)
  -y  Confirm yes to run
 
 $(text_red '*')Build data:
@@ -72,14 +73,14 @@ function end() {
     local end_code=${2:-$e}
 
     if [[ "$end_message" != "" ]]; then
-        if [ $end_code -ne 0 ]; then
+        if [ "$end_code" -ne 0 ]; then
             text_red "$script_name" >&2
             echo -n ": " >&2
         fi
         echo "$end_message" >&2
     fi
 
-    exit $end_code
+    exit "$end_code"
 }
 
 trap end EXIT SIGHUP SIGINT SIGQUIT SIGTERM
@@ -87,14 +88,14 @@ trap end EXIT SIGHUP SIGINT SIGQUIT SIGTERM
 function text_ansi() {
     local code=$1
     shift
-    echo -en "\033[${code}m$@\033[0m"
+    echo -en "\033[${code}m$*\033[0m"
 }
 function text_red() { text_ansi 31 "$@"; }
 
 function confirm_run() {
     [[ ${yes:-0} -eq 1 ]] && return
 
-    read -p "${1:-Continue}? [y/N] " -n 1
+    read -r -p "${1:-Continue}? [y/N] " -n 1
     [[ $REPLY == "" ]] && echo -en "\033[1A"
     echo
     [[ $REPLY =~ ^[Yy]$ ]] || end
@@ -119,15 +120,14 @@ function remove_data() { #1: path array
 build_data_paths=(./.vscode-test
     ./dist
     ./node_modules
-    ./out
     ./package-lock.json
 )
 some_build_data_paths=(./.vscode-test
     ./dist
-    ./out
 )
 
 compile_after_install=0
+compile_only=0
 do_not_remove_build_data=0
 npm_clean_install=0
 npm_install=0
@@ -147,22 +147,25 @@ while getopts "${script_switches}" OPTION; do
     *) usage ;;
     esac
 done
-shift $(($OPTIND - 1))
+shift $((OPTIND - 1))
 
 script_action=$1
-if [[ "$script_action" == "clean" || "$script_action" == "c" ]]; then
+if [[ "$script_action" == "clean" || "$script_action" == "e" ]]; then
     npm_clean_install=1
     if [[ $do_not_remove_build_data == 0 ]]; then
-        script_action="Remove some build data and clean-install packages"
+        script_action="Remove some build data and clean-install NPM dependency packages"
     else
-        script_action="Clean-install packages"
+        script_action="Clean-install NPM dependency packages"
     fi
+elif [[ "$script_action" == "compile" || "$script_action" == "c" ]]; then
+    compile_only=1
+    script_action="Compile"
 elif [[ "$script_action" == "install" || "$script_action" == "i" ]]; then
     npm_install=1
     if [[ $do_not_remove_build_data == 0 ]]; then
-        script_action="Remove build data and install packages"
+        script_action="Remove build data and install NPM dependency packages"
     else
-        script_action="Install packages"
+        script_action="Install NPM dependency packages"
     fi
 elif [[ "$script_action" == "remove" || "$script_action" == "r" ]]; then
     do_not_remove_build_data=0
@@ -176,12 +179,12 @@ elif [[ "$script_action" == "prepublish" || "$script_action" == "p" ]]; then
     script_action="Prepublish"
 elif [[ "$script_action" == "update" || "$script_action" == "u" ]]; then
     update_packages=1
-    script_action="Update packages"
+    script_action="Update NPM dependency packages"
 else
     usage
 fi
 
-if [[ $prepublish != 1 && $remove_data_only != 1 && $update_packages != 1 && $compile_after_install == 1 ]]; then # only for clean and install
+if [[ $prepublish != 1 && $remove_data_only != 1 && $update_packages != 1 && $compile_only != 1 && $compile_after_install == 1 ]]; then # only for clean and install
     script_action="$script_action and compile"
 fi
 
@@ -189,16 +192,17 @@ confirm_run "$script_action"
 
 if [[ $update_packages == 1 ]]; then
     cwd=$(pwd)
-    outdated_packages=$(npm outdated --parseable --depth=0 | cut -d: -f1 | egrep -v '@types/((node)|(vscode))' | sed "s/${cwd//\//\\/}\/node_modules\///") || true
+    # shellcheck disable=SC2207
+    outdated_packages=($(npm outdated --parseable --depth=0 | cut -d: -f1 | grep -Ev '@types/((node)|(vscode))' | sed "s/${cwd//\//\\/}\/node_modules\///")) || true
 
-    if [[ "$outdated_packages" == "" ]]; then
+    if [[ "${outdated_packages[*]}" == "" ]]; then
         end "No packages to update."
     fi
 
-    echo -e "Updating packages:\n${outdated_packages[@]}"
-    npm update --save ${outdated_packages[*]}
+    echo -e "Updating packages:\n${outdated_packages[*]}"
+    npm update --save "${outdated_packages[@]}"
 
-    major_versions=$(npm outdated --parseable --depth=0 | cut -d: -f4 | egrep -v '@types/((node)|(vscode))' | sed "s/${cwd//\//\\/}\/node_modules\///") || true
+    major_versions=$(npm outdated --parseable --depth=0 | cut -d: -f4 | grep -Ev '@types/((node)|(vscode))' | sed "s/${cwd//\//\\/}\/node_modules\///") || true
     if [[ "$major_versions" != "" ]]; then
         echo
         text_red "Major versions not updated:\n"
@@ -221,24 +225,24 @@ if [[ $do_not_remove_build_data == 0 ]]; then
 fi
 
 if [[ $npm_clean_install == 1 ]]; then
-    echo "Clean-Installing NPM packages..."
+    echo "Clean-Installing NPM dependency packages..."
     npm ci
 elif [[ $npm_install == 1 ]]; then
     if [[ $prepublish == 1 ]]; then
-        echo "Installing NPM packages (with dev dependencies omitted)..."
+        echo "Installing NPM dependency packages (with dev dependencies omitted)..."
         npm install --omit=dev
     else
-        echo "Installing NPM packages..."
+        echo "Installing NPM dependency packages..."
         npm install
     fi
 fi
 
 if [[ $run_eslint == 1 ]]; then
     echo "Running ESLint..."
-    npx eslint -c eslint.config.mjs ./src || true
+    npx eslint -c ./eslint.config.mjs ./src || true
 fi
 
-if [[ $compile_after_install == 1 ]]; then
+if [[ $compile_only == 1 || $compile_after_install == 1 ]]; then
     if [[ $prepublish == 1 ]]; then
         echo "Compiling (for publish)..."
         tsc -p ./tsconfig.publish.json
