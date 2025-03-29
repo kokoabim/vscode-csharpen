@@ -29,16 +29,16 @@
 set -eo pipefail
 
 script_name="${0##*/}"
-script_ver="1.1"
+script_ver="1.1.1"
 script_title="Visual Studio Code Extension Management"
 script_options="d:"
-script_switches="hoxy"
+script_switches="hopxy"
 
 function usage() {
     end "$script_title (v$script_ver)
 
-Use: $script_name [-oxy] [-d:] pub-install|pi
-     $script_name [-oy] [-d:] publish|p
+Use: $script_name [-opxy] [-d:] pub-install|pi
+     $script_name [-opy] [-d:] publish|p
      $script_name [-xy] install|i $(text_underline package)
      $script_name [-y] uninstall|u
 
@@ -54,6 +54,7 @@ Options:
 Switches:
  -h  View this help
  -o  Overwrite package (if exists)
+ -p  Pre-release version
  -x  Uninstall extension (if installed)
  -y  Confirm yes to run
 "
@@ -68,29 +69,29 @@ function end() {
     local end_code=${2:-$e}
 
     if [[ "$end_message" != "" ]]; then
-        if [ $end_code -ne 0 ]; then
+        if [ "$end_code" -ne 0 ]; then
             text_red "$script_name" >&2
             echo -n ": " >&2
         fi
         echo "$end_message" >&2
     fi
 
-    exit $end_code
+    exit "$end_code"
 }
 trap end EXIT SIGHUP SIGINT SIGQUIT SIGTERM
 
 function text_ansi() {
     local code=$1
     shift
-    echo -en "\033[${code}m$@\033[0m"
+    echo -en "\033[${code}m$*\033[0m"
 }
 function text_red() { text_ansi 31 "$@"; }
 function text_underline() { text_ansi 4 "$@"; }
 
-function confirm_run() {
+function confirm_run() { # 1: message
     [[ ${yes:-0} -eq 1 ]] && return
 
-    read -p "${1:-Continue}? [y/N] " -n 1
+    read -r -p "${1:-Continue}? [y/N] " -n 1
     [[ $REPLY == "" ]] && echo -en "\033[1A"
     echo
     [[ $REPLY =~ ^[Yy]$ ]] || end
@@ -98,7 +99,10 @@ function confirm_run() {
 
 function get_pkg_value() {
     local key="$1"
-    local value=$(echo "$pkg_json_content" | egrep -m 1 -o "\"$1\":\s*\"[^\"]*" | egrep -o '[^"]*$')
+    local value=
+
+    value=$(echo "$pkg_json_content" | grep -Em 1 -o "\"$key\":\s*\"[^\"]*" | grep -Eo '[^"]*$')
+
     echo -n "$value"
 }
 
@@ -123,6 +127,7 @@ pkg_json_content=""
 pkg_name=""
 pkg_version=""
 pkg_publisher=""
+pkg_pre_release=0
 overwrite_pkg_file=0
 uninstall_extension=0
 yes=0
@@ -132,12 +137,13 @@ while getopts "${script_options}${script_switches}" OPTION; do
     d) pkg_directory="$OPTARG" ;;
     h) usage ;;
     o) overwrite_pkg_file=1 ;;
+    p) pkg_pre_release=1 ;;
     x) uninstall_extension=1 ;;
     y) yes=1 ;;
     *) usage ;;
     esac
 done
-shift $(($OPTIND - 1))
+shift $((OPTIND - 1))
 
 [[ "$1" == "" ]] && usage
 
@@ -153,6 +159,8 @@ if [[ "$script_action" == "install" ]]; then
     pkg_file="$2"
 
     [[ -f "$pkg_file" ]] || end "File not found: $pkg_file" 1
+
+    pkg_directory=
 else
     # all other actions (other than "install")
 
@@ -167,11 +175,13 @@ else
     pkg_version=$(get_pkg_value "version")
     [[ -z "$pkg_version" ]] && end "Failed to get version from $pkg_json_file" 1
 
+    [[ $pkg_pre_release -ne 1 ]] && pkg_version="${pkg_version}-pre"
+
     pkg_publisher=$(get_pkg_value "publisher")
     [[ -z "$pkg_publisher" ]] && end "Failed to get publisher from $pkg_json_file" 1
 
     pkg_id="$pkg_publisher.$pkg_name"
-    pkg_file="$pkg_id-$pkg_version.vsix"
+    pkg_file="${pkg_publisher}_${pkg_name}_${pkg_version}.vsix"
 fi
 
 [[ "$pkg_directory" == "" ]] || pkg_file="${pkg_directory}/${pkg_file}"
@@ -187,6 +197,7 @@ elif [[ "$script_action" == "uninstall" ]]; then
 fi
 
 [[ "$pkg_name" == "" ]] || echo "• Name: $pkg_name"
+[[ $pkg_pre_release -ne 1 ]] || echo "• Pre-release"
 [[ "$pkg_version" == "" ]] || echo "• Version: $pkg_version"
 [[ "$pkg_publisher" == "" ]] || echo "• Publisher: $pkg_publisher"
 [[ "$pkg_id" == "" ]] || echo "• ID: $pkg_id"
@@ -194,7 +205,7 @@ fi
 [[ $overwrite_pkg_file -ne 1 ]] || echo "• Overwrite package (if exists)"
 [[ $uninstall_extension -ne 1 ]] || echo "• Uninstall extension (if installed)"
 
-confirm_run
+confirm_run "Continue"
 
 # actions: install, pub-install, uninstall
 
@@ -234,8 +245,11 @@ if [[ "$script_action" =~ ^pub ]]; then
         echo "Directory created: $pkg_directory"
     fi
 
+    pre_release_switch=""
+    [[ $pkg_pre_release -ne 1 ]] || pre_release_switch="--pre-release"
+
     echo "Publishing package (which runs NPM 'vscode:prepublish' script)..."
-    vsce package -o "$pkg_file" || end "Failed to publish package" 1
+    vsce package $pre_release_switch -o "$pkg_file" || end "Failed to publish package" 1
     echo "Published package"
 
     echo "Installing all dependencies (since NPM 'vscode:prepublish' script omits dev dependencies)..."

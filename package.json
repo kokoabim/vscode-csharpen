@@ -7,18 +7,16 @@
     "shortName": "CSharpen",
     "author": {
         "name": "Spencer James",
-        "email": "apps@swsj.me",
         "url": "https://swsj.me/"
     },
     "bugs": {
-        "url": "https://github.com/kokoabim/vscode-csharpen/issues",
-        "email": "apps@swsj.me"
+        "url": "https://github.com/kokoabim/vscode-csharpen/issues"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/kokoabim/vscode-csharpen"
+        "url": "https://github.com/kokoabim/vscode-csharpen.git"
     },
-    "license": "LICENSE.md",
+    "license": "SEE LICENSE IN LICENSE.md",
     "icon": "./images/extension-512.png",
     "engines": {
         "vscode": "^1.96.0"

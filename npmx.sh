@@ -42,18 +42,18 @@ Use: $script_name [-bcl] clean|install
      $script_name update
 
 Actions:
- clean|e       Remove some build data$(text_red '†') and clean-install NPM dependencies (npm-ci)
+ clean|e       Remove some build data$(text_red '†') and clean-install NPM package dependencies (npm-ci)
  compile|c     Compile only (tsc)
- install|i     Perform remove action and install NPM dependencies (npm-install)
- prepublish|p  Perform remove action, install NPM dependencies (npm-install; dev dependencies omitted) and compile for publish (tsc)
+ install|i     Perform remove action and install NPM package dependencies (npm-install)
+ prepublish|p  Perform remove action, install NPM package dependencies (npm-install; dev dependencies omitted) and compile for publish (tsc)
  remove|r      Remove build data$(text_red '*')
- update|u      Update NPM dependencies except for '@types/((node)|(vscode))' and major versions (npm-update)
+ update|u      Update NPM package dependencies except for '@types/((node)|(vscode))' and major versions (npm-update)
 
 Switches:
  -b  Do not remove build data
- -c  Compile after install NPM dependencies (tsc)
+ -c  Compile after install NPM package dependencies (tsc)
  -h  View this help
- -l  Run ESLint after install NPM dependencies (eslint)
+ -l  Run ESLint after install NPM package dependencies (eslint)
  -y  Confirm yes to run
 
 $(text_red '*')Build data:
@@ -153,9 +153,9 @@ script_action=$1
 if [[ "$script_action" == "clean" || "$script_action" == "e" ]]; then
     npm_clean_install=1
     if [[ $do_not_remove_build_data == 0 ]]; then
-        script_action="Remove some build data and clean-install NPM dependency packages"
+        script_action="Remove some build data and clean-install NPM package dependencies"
     else
-        script_action="Clean-install NPM dependency packages"
+        script_action="Clean-install NPM package dependencies"
     fi
 elif [[ "$script_action" == "compile" || "$script_action" == "c" ]]; then
     compile_only=1
@@ -163,9 +163,9 @@ elif [[ "$script_action" == "compile" || "$script_action" == "c" ]]; then
 elif [[ "$script_action" == "install" || "$script_action" == "i" ]]; then
     npm_install=1
     if [[ $do_not_remove_build_data == 0 ]]; then
-        script_action="Remove build data and install NPM dependency packages"
+        script_action="Remove build data and install NPM package dependencies"
     else
-        script_action="Install NPM dependency packages"
+        script_action="Install NPM package dependencies"
     fi
 elif [[ "$script_action" == "remove" || "$script_action" == "r" ]]; then
     do_not_remove_build_data=0
@@ -179,7 +179,7 @@ elif [[ "$script_action" == "prepublish" || "$script_action" == "p" ]]; then
     script_action="Prepublish"
 elif [[ "$script_action" == "update" || "$script_action" == "u" ]]; then
     update_packages=1
-    script_action="Update NPM dependency packages"
+    script_action="Update NPM package dependencies"
 else
     usage
 fi
@@ -225,14 +225,14 @@ if [[ $do_not_remove_build_data == 0 ]]; then
 fi
 
 if [[ $npm_clean_install == 1 ]]; then
-    echo "Clean-Installing NPM dependency packages..."
+    echo "Clean-Installing NPM package dependencies..."
     npm ci
 elif [[ $npm_install == 1 ]]; then
     if [[ $prepublish == 1 ]]; then
-        echo "Installing NPM dependency packages (with dev dependencies omitted)..."
+        echo "Installing NPM package dependencies (with dev dependencies omitted)..."
         npm install --omit=dev
     else
-        echo "Installing NPM dependency packages..."
+        echo "Installing NPM package dependencies..."
         npm install
     fi
 fi
