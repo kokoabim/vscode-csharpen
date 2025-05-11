@@ -1,7 +1,7 @@
 {
     "name": "csharpen",
     "publisher": "spencerjames",
-    "version": "0.5.5",
+    "version": "0.5.6",
     "description": "Sharpen (organize) C# files by ordering, sorting and regionalizing symbols.",
     "displayName": "CSharpen — C# File Organizer",
     "shortName": "CSharpen",
@@ -686,7 +686,7 @@
                 },
                 "csharpen.quickFixFilters": {
                     "order": 9,
-                    "markdownDescription": "Patterns to filter out (exclude) Quick Fix titles when outputting File Diagnostics and Quick Fixes.",
+                    "markdownDescription": "Patterns to filter out (exclude) Quick Fix and Refactor titles when outputting File Diagnostics, Quick Fixes and Refactors.",
                     "type": "array",
                     "items": {
                         "type": "string",
@@ -695,13 +695,20 @@
                     "default": [
                         "^Fix All",
                         "^Suppress or configure issues",
-                        "^Convert to block scoped namespace",
-                        "^Use primary constructor",
                         "^Add braces",
                         "^Use block body for method",
                         "^Use explicit type instead of 'var'",
                         "^Fix using Copilot",
-                        "^Explain using Copilot"
+                        "^Explain using Copilot",
+                        "^Modify using Copilot",
+                        "^(Extract|Encapsulate|Foreach|Disable|Try|Else|More|Generate Equals|Replace)",
+                        "DebuggerDisplay",
+                        "^Generate constructor",
+                        "^Add parameters",
+                        "^Add optional parameters",
+                        "^Use expression body",
+                        "^Use block body",
+                        "^Convert to"
                     ]
                 },
                 "csharpen.doNotRemoveThesePackageReferences": {
@@ -886,6 +893,7 @@
                         "Make anonymous function static",
                         "Make static",
                         "Remove accessibility modifiers",
+                        "Remove Unnecessary Usings",
                         "Simplify LINQ expression",
                         "Simplify member access",
                         "Use 'Count' check instead",
@@ -895,7 +903,9 @@
                         "Use pattern matching",
                         "Use simple 'using'",
                         "use 'var' instead",
-                        "Use collection expression"
+                        "Use collection expression",
+                        "Use null propagation",
+                        "Rename to "
                     ]
                 },
                 "csharpen.delayBeforeSharpeningFile": {
@@ -914,10 +924,11 @@
         }
     },
     "scripts": {
-        "compile": "tsc -p ./",
+        "compile": "./npmx.sh -cy compile",
         "install-compile": "./npmx.sh -bcy install",
         "lint": "eslint ./src",
         "pretest": "./npmx.sh -cly install",
+        "rebuild": "./clean.sh -iy && npm run compile",
         "test": "vscode-test",
         "vscode:prepublish": "./npmx.sh -y prepublish",
         "watch": "tsc -watch -p ./"
@@ -925,14 +936,14 @@
     "devDependencies": {
         "@types/node": "^22.13.10",
         "@types/vscode": "^1.96.0",
-        "@typescript-eslint/eslint-plugin": "^8.26.1",
-        "@typescript-eslint/parser": "^8.26.1",
+        "@typescript-eslint/eslint-plugin": "^8.32.0",
+        "@typescript-eslint/parser": "^8.32.0",
         "@vscode/test-cli": "^0.0.10",
-        "@vscode/test-electron": "^2.4.1",
-        "eslint": "^9.22.0",
+        "@vscode/test-electron": "^2.5.2",
+        "eslint": "^9.26.0",
         "typescript": "^5.8.2"
     },
     "dependencies": {
-        "glob": "^11.0.1"
+        "glob": "^11.0.2"
     }
 }

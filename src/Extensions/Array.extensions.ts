@@ -9,11 +9,15 @@ declare global {
 }
 
 Array.prototype.anyMatches = function (regexp: string | RegExp): boolean {
+    if (!Array.isArray(this)) return false;
+
     const regex = regexp instanceof RegExp ? regexp : new RegExp(regexp);
     return this.some(item => regex.test(item.toString()));
 };
 
 Array.prototype.count = function <T>(predicate: (item: T) => boolean): number {
+    if (!Array.isArray(this)) return 0;
+
     return this.reduce((count, item) => {
         if (predicate(item)) count++;
         return count;

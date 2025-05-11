@@ -230,7 +230,7 @@ if [[ $npm_clean_install == 1 ]]; then
 elif [[ $npm_install == 1 ]]; then
     if [[ $prepublish == 1 ]]; then
         echo "Installing NPM package dependencies (with dev dependencies omitted)..."
-        npm install --omit=dev
+        npm install # TODO: figure out why now using this switch there are errors: --omit=dev
     else
         echo "Installing NPM package dependencies..."
         npm install

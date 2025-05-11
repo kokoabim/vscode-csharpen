@@ -1,5 +1,10 @@
 ## β Beta
 
+#### 2025-05-10 — 0.5.6
+
+-   `Output File Diagnostics` command now includes the suggested Refactors.
+-   Minor changes to default settings of `Perform Quick Fixes` command.
+
 #### 2025-03-16 — 0.5.5
 
 -   Added **Perform Quick Fixes** feature which, based on configurable Quick Fix title patterns, performs all Quick Fixes for the current file.

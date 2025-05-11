@@ -59,9 +59,9 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         documentSymbolCodeActions.children.forEach(c => this.filterCodeActions(c, includeFilter, excludeFilter));
     }
 
-    private static async getDocumentSymbolQuickFixes(textDocument: vscode.TextDocument, documentSymbol: vscode.DocumentSymbol): Promise<DocumentSymbolCodeActions> {
-        const documentSymbolCodeActions = new DocumentSymbolCodeActions(documentSymbol, await vscode.commands.executeCommand("vscode.executeCodeActionProvider", textDocument.uri, documentSymbol.range, vscode.CodeActionKind.QuickFix.value) ?? []);
-        for (var ds of documentSymbol.children) documentSymbolCodeActions.children.push(await this.getDocumentSymbolQuickFixes(textDocument, ds));
+    private static async getDocumentSymbolCodeActions(textDocument: vscode.TextDocument, documentSymbol: vscode.DocumentSymbol, codeActionKind: string | undefined = vscode.CodeActionKind.QuickFix.value): Promise<DocumentSymbolCodeActions> {
+        const documentSymbolCodeActions = new DocumentSymbolCodeActions(documentSymbol, await vscode.commands.executeCommand("vscode.executeCodeActionProvider", textDocument.uri, documentSymbol.range, codeActionKind) ?? []);
+        for (var ds of documentSymbol.children) documentSymbolCodeActions.children.push(await this.getDocumentSymbolCodeActions(textDocument, ds, codeActionKind));
         return documentSymbolCodeActions;
     }
 
@@ -69,13 +69,13 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         return vscode.languages.getDiagnostics(document.uri).map(d => new FileDiagnostic(FileSystem.fileNameUsingTextDocument(document), d));
     }
 
-    private static async getTextDocumentQuickFixes(textDocument: vscode.TextDocument, includeFilter: string[], excludeFilter: string[]): Promise<TextDocumentCodeActions | undefined> {
+    private static async getTextDocumentCodeActions(textDocument: vscode.TextDocument, includeFilter: string[], excludeFilter: string[], codeActionKind: string | undefined = vscode.CodeActionKind.QuickFix.value): Promise<TextDocumentCodeActions | undefined> {
         const documentSymbols = await vscode.commands.executeCommand("vscode.executeDocumentSymbolProvider", textDocument.uri).then(symbols => symbols as vscode.DocumentSymbol[] || []);
         if (documentSymbols.length === 0) return;
 
         const textDocumentCodeActions = new TextDocumentCodeActions(textDocument);
 
-        for (const ds of documentSymbols) textDocumentCodeActions.children.push(await this.getDocumentSymbolQuickFixes(textDocument, ds));
+        for (const ds of documentSymbols) textDocumentCodeActions.children.push(await this.getDocumentSymbolCodeActions(textDocument, ds, codeActionKind));
 
         for (const dsca of textDocumentCodeActions.children) this.filterCodeActions(dsca, includeFilter, excludeFilter);
 
@@ -276,7 +276,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             let isFirstLoop = true;
 
             do {
-                const textDocumentCodeActions = await CSharpenVSCodeExtension.getTextDocumentQuickFixes(textDocument, settings.quickFixesToPerform, []);
+                const textDocumentCodeActions = await CSharpenVSCodeExtension.getTextDocumentCodeActions(textDocument, settings.quickFixesToPerform, []);
                 if (!textDocumentCodeActions?.hasAny) {
                     if (isFirstLoop) {
                         if (showMessage) await this.information("No Quick Fixes found.");
@@ -555,10 +555,12 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
 
     private async outputDiagnosticsAndCodeActions(settings: CSharpenVSCodeExtensionSettings, textDocument: vscode.TextDocument, showMessage: boolean): Promise<void> {
         const fileDiagnostics = CSharpenVSCodeExtension.getFileDiagnosticsUsingTextDocument(textDocument);
-        const quickFixes = await CSharpenVSCodeExtension.getTextDocumentQuickFixes(textDocument, [], settings.quickFixFilters);
+        const quickFixes = await CSharpenVSCodeExtension.getTextDocumentCodeActions(textDocument, [], settings.quickFixFilters);
+        const refactors = await CSharpenVSCodeExtension.getTextDocumentCodeActions(textDocument, [], settings.quickFixFilters, vscode.CodeActionKind.Refactor.value);
+        const sources = await CSharpenVSCodeExtension.getTextDocumentCodeActions(textDocument, [], settings.quickFixFilters, vscode.CodeActionKind.Source.value);
 
-        if (fileDiagnostics.length === 0 && quickFixes?.hasAny !== true) {
-            if (showMessage) await this.information("No File Diagnostics or Quick Fixes.");
+        if (fileDiagnostics.length === 0 && quickFixes?.hasAny !== true && refactors?.hasAny !== true && sources?.hasAny !== true) {
+            if (showMessage) await this.information("No File Diagnostics, Quick Fixes or Refactors.");
             return;
         }
 
@@ -573,6 +575,16 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             this.outputLine(`[Quick Fixes: ${quickFixes.count}]`);
             this.outputFileCodeActions(quickFixes);
         }
+
+        if (refactors?.hasAny) {
+            this.outputLine(`[Refactors: ${refactors.count}]`);
+            this.outputFileCodeActions(refactors);
+        }
+
+        if (sources?.hasAny) {
+            this.outputLine(`[Sources: ${sources.count}]`);
+            this.outputFileCodeActions(sources);
+        }
     }
 
     private outputDocumentSymbolCodeActions(parentSymbolDetail: string, documentSymbolCodeActions: DocumentSymbolCodeActions): void {
@@ -581,7 +593,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
         const symbolDetail = `${parentSymbolDetail}.${documentSymbolCodeActions.documentSymbol.detail}`;
 
         if (documentSymbolCodeActions.codeActions.length > 0) {
-            this.outputLine(`${symbolDetail}: ${documentSymbolCodeActions.codeActions.map(ca => ca.title).join(", ")}`);
+            this.outputLine(`${symbolDetail}:\n${documentSymbolCodeActions.codeActions.map(ca => `  ${ca.title}`).join("\n")}`);
         }
 
         if (documentSymbolCodeActions.children.length > 0) {
@@ -596,7 +608,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             if (!dsca.hasAny) continue;
 
             if (dsca.codeActions.length > 0) {
-                this.outputLine(`${dsca.documentSymbol.detail}: ${dsca.codeActions.map(ca => ca.title).join(", ")}`);
+                this.outputLine(`${dsca.documentSymbol.detail}:\n${dsca.codeActions.map(ca => `  ${ca.title}`).join("\n")}`);
             }
 
             if (dsca.children.length > 0) {

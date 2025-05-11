@@ -175,7 +175,7 @@ else
     pkg_version=$(get_pkg_value "version")
     [[ -z "$pkg_version" ]] && end "Failed to get version from $pkg_json_file" 1
 
-    [[ $pkg_pre_release -ne 1 ]] && pkg_version="${pkg_version}-pre"
+    [[ $pkg_pre_release -ne 1 ]] || pkg_version="${pkg_version}-pre"
 
     pkg_publisher=$(get_pkg_value "publisher")
     [[ -z "$pkg_publisher" ]] && end "Failed to get publisher from $pkg_json_file" 1
