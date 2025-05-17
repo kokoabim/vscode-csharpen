@@ -533,7 +533,7 @@ export class CSharpSymbol {
     }
 
     private static isPrimaryConstructor(documentSymbol: vscode.DocumentSymbol, parentSymbol: vscode.DocumentSymbol): boolean {
-        return documentSymbol.kind === vscode.SymbolKind.Method && documentSymbol.name === ".ctor" && parentSymbol.selectionRange.start.isEqual(documentSymbol.selectionRange.start);
+        return documentSymbol.kind === vscode.SymbolKind.Method && (documentSymbol.name === parentSymbol.name || documentSymbol.name === ".ctor") && parentSymbol.selectionRange.start.isEqual(documentSymbol.selectionRange.start);
     }
 
     private static isRecord(textDocument: vscode.TextDocument, documentSymbol: vscode.DocumentSymbol): boolean {
@@ -953,6 +953,8 @@ export class CSharpSymbol {
     }
 
     private static parseSymbolTypeAndReturnTypeFromCode(symbol: CSharpSymbol, code: string): void {
+        if (symbol.type === CSharpSymbolType.primaryConstructor) return;
+
         let symbolTypeOnly: string | undefined;
         let symbolTypeWithReturnType: string | undefined;
 
@@ -1062,7 +1064,7 @@ export class CSharpSymbol {
                 else return CSharpSymbolType.property;
 
             case vscode.SymbolKind.Method:
-                if (documentSymbol.name === ".ctor") {
+                if (documentSymbol.name === parentSymbol?.name || documentSymbol.name === ".ctor") {
                     if (parentSymbol && CSharpSymbol.isPrimaryConstructor(documentSymbol, parentSymbol.documentSymbol)) { return CSharpSymbolType.primaryConstructor; }
                     else { return CSharpSymbolType.constructor; }
                 }

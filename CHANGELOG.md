@@ -1,5 +1,10 @@
 ## β Beta
 
+#### 2025-05-16 — 0.5.7
+
+-   Fixed breaking changes in recent VS Code update that caused constructors to be handled incorrectly as methods, thus they were being ordered/sorted with methods.
+-   Fixed a minor issue with primary constructors. I _really_ do not like them. The API treats them differently than other symbols, as with events and delegates, so special, specific handling needs to be added which feels clunky at best. 🤦🏼‍♂️
+
 #### 2025-05-10 — 0.5.6
 
 -   `Output File Diagnostics` command now includes the suggested Refactors.
