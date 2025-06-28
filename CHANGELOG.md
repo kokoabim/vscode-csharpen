@@ -1,5 +1,11 @@
 ## β Beta
 
+#### 2025-06-28 — 0.5.8
+
+-   Added ability to use `// csharpen: do-not-remove` comment after a `using` directive to prevent it from being removed. This is useful for `using` directives that are (seemed to be) not used because of preprocessor directives controlling conditional compilation or not used in code but are required by tooling.
+-   Fixed issue with array extensions caused by another VS Code extension.
+-   Fixed incorrect shortcut in README.md.
+
 #### 2025-05-16 — 0.5.7
 
 -   Fixed breaking changes in recent VS Code update that caused constructors to be handled incorrectly as methods, thus they were being ordered/sorted with methods.

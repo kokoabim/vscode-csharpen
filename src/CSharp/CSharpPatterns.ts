@@ -26,7 +26,7 @@ export class CSharpPatterns {
     public static readonly symbolTypeOnlyWithReturnTypeFirst = `(?<returnType>${this.anyType})\\s+(?<symbolType>operator)`;
     public static readonly symbolTypeOnlyWithReturnTypeLast = `(?<symbolType>\\s*(delegate|event|const|(explicit|implicit)\\s+operator))\\s+(?<returnType>${this.anyType})`;
     public static readonly symbolTypeWithReturnTypeKeywords = `(?<keywords>(delegate\\s+${this.anyType}|event\\s+${this.anyType}|const\\s+${this.anyType}|(explicit|implicit)\\s+operator\\s+${this.anyType}|${this.anyType}\\s+operator))`;
-    public static readonly usingDirectiveRegExp = new RegExp(`^(?<directive>[ \\t]*(?<g>global\\s+)?using\\s+(?<s>static\\s+)?((?<name>${CSharpPatterns.name})\\s*=\\s*)?(?<namespace>${CSharpPatterns.namespace})\\s*;[\\r\\n]*)`, "gm");
+    public static readonly usingDirectiveRegExp = new RegExp(`^(?<directive>[ \\t]*(?<g>global\\s+)?using\\s+(?<s>static\\s+)?((?<name>${CSharpPatterns.name})\\s*=\\s*)?(?<namespace>${CSharpPatterns.namespace})\\s*;[\\t ]*(?<comment>//.*)?[\\r\\n]*)`, "gm");
     public static readonly xmlCommentRegExp = new RegExp("^(?<text>[ \\t]*(///.*?[\\r\\n]*)+)$", "gm");
 
     public static isMatch(target: string, pattern: string): boolean {

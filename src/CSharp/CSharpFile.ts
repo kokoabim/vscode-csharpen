@@ -5,6 +5,7 @@ import { FileDiagnostic, FileDiagnosticIdentifier } from "../Models/FileDiagnost
 import { FileSystem } from "../Utils/FileSystem";
 import { CSharpSymbol } from "./CSharpSymbol";
 import { CSharpSymbolType } from "./CSharpSymbolType";
+import { CSharpenCommentControls } from "../VSCodeExtension/CSharpenCommentControls";
 
 export class CSharpFile {
     public static readonly zeroPosition = new vscode.Position(0, 0);
@@ -36,7 +37,10 @@ export class CSharpFile {
     }
 
     public static async removeUnusedUsings(textEditor: vscode.TextEditor, fileDiagnostics: FileDiagnostic[]): Promise<number> {
-        const unusedUsings = fileDiagnostics.filter(d => d.identifier === FileDiagnosticIdentifier.usingDirectiveUnnecessary);
+        const unusedUsings = fileDiagnostics.filter(d =>
+            d.identifier === FileDiagnosticIdentifier.usingDirectiveUnnecessary
+            && !CSharpenCommentControls.hasDoNotRemove(textEditor.document.getText(d.range)));
+
         if (unusedUsings.length === 0) return 0;
 
         const edits = unusedUsings.sort((a, b) => {

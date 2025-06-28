@@ -16,7 +16,7 @@ Array.prototype.anyMatches = function (regexp: string | RegExp): boolean {
 };
 
 Array.prototype.count = function <T>(predicate: (item: T) => boolean): number {
-    if (!Array.isArray(this)) return 0;
+    if (predicate === undefined || !Array.isArray(this)) return 0;
 
     return this.reduce((count, item) => {
         if (predicate(item)) count++;
@@ -25,6 +25,8 @@ Array.prototype.count = function <T>(predicate: (item: T) => boolean): number {
 };
 
 Array.prototype.groupBy = function <T, K extends keyof T>(key: K): Map<T[K], T[]> {
+    if (!key) return new Map<T[K], T[]>();
+
     return this.reduce((map, item) => {
         const keyValue = item[key];
         const group = map.get(keyValue);
@@ -38,6 +40,8 @@ Array.prototype.groupBy = function <T, K extends keyof T>(key: K): Map<T[K], T[]
 };
 
 Array.prototype.sortBy = function <T, K extends keyof T>(key: K): T[] {
+    if (!key) return [];
+
     return this.sort((a, b) => {
         if (a[key] < b[key]) return -1;
         if (a[key] > b[key]) return 1;
@@ -46,6 +50,8 @@ Array.prototype.sortBy = function <T, K extends keyof T>(key: K): T[] {
 };
 
 Array.prototype.sortReverseBy = function <T, K extends keyof T>(key: K): T[] {
+    if (!key) return [];
+
     return this.sort((a, b) => {
         if (a[key] < b[key]) return 1;
         if (a[key] > b[key]) return -1;

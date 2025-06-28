@@ -46,7 +46,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
     }
 
     private static filterCodeActions(documentSymbolCodeActions: DocumentSymbolCodeActions, includeFilter: string[], excludeFilter: string[]): void {
-        if (includeFilter.length === 0 && excludeFilter.length === 0) return;
+        if (documentSymbolCodeActions.codeActions.length === 0 || (includeFilter.length === 0 && excludeFilter.length === 0)) return;
 
         if (includeFilter.length > 0) {
             documentSymbolCodeActions.codeActions = documentSymbolCodeActions.codeActions.filter(ca => includeFilter.some(f => ca.title.match(f) !== null));

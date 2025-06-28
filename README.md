@@ -19,8 +19,8 @@
 
 ### Keyboard shortcut
 
--   Current file: **⇧**+**⌥**+**⌘**+**f** on macOS, **shift**+**alt**+**ctrl**+**f** on Windows/Linux
--   Tip: Think Format Document command, which is **⇧**+**⌥**+**f** on macOS or **shift**+**alt**+**f** on Windows/Linux, but add **⌘** on macOS or **ctrl** on Windows/Linux.
+-   Current file: **⇧**+**⌥**+**⌘**+**f** on macOS, **shift**+**alt**+**logo**+**f** on Windows/Linux
+-   Tip: Think Format Document command, which is **⇧**+**⌥**+**f** on macOS or **shift**+**alt**+**f** on Windows/Linux, but add **⌘** on macOS or **logo** on Windows/Linux.
 
 ### Commands
 
@@ -46,6 +46,8 @@ Note: If this occurs, use the Quick Fix to re-edd the `using` directive. (**⌘*
 Remove unused `using` directives (either when _sharpening_ a file, removing unused package references or using a standalone command).
 
 Stand-alone command: "Remove Unused Using Declarations" (`kokoabim.csharpen.remove-unused-usings`)
+
+Note: Append to the `using` directive line with `// csharpen: do-not-remove` comment to prevent it from being removed. This is useful for `using` directives that are (seemed to be) not used because of preprocessor directives controlling conditional compilation or not used in code but are required by tooling.
 
 # Perform Quick Fixes
 
