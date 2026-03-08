@@ -1,160 +1,165 @@
 ## β Beta
 
+#### 2026-03-08 — 0.5.9
+
+- Fixed issues with sharpening files related to recent VS Code update.
+- Changed required VS Code version to 1.109.0.
+
 #### 2025-06-28 — 0.5.8
 
--   Added ability to use `// csharpen: do-not-remove` comment after a `using` directive to prevent it from being removed. This is useful for `using` directives that are (seemed to be) not used because of preprocessor directives controlling conditional compilation or not used in code but are required by tooling.
--   Fixed issue with array extensions caused by another VS Code extension.
--   Fixed incorrect shortcut in README.md.
+- Added ability to use `// csharpen: do-not-remove` comment after a `using` directive to prevent it from being removed. This is useful for `using` directives that are (seemed to be) not used because of preprocessor directives controlling conditional compilation or not used in code but are required by tooling.
+- Fixed issue with array extensions caused by another VS Code extension.
+- Fixed incorrect shortcut in README.md.
 
 #### 2025-05-16 — 0.5.7
 
--   Fixed breaking changes in recent VS Code update that caused constructors to be handled incorrectly as methods, thus they were being ordered/sorted with methods.
--   Fixed a minor issue with primary constructors. I _really_ do not like them. The API treats them differently than other symbols, as with events and delegates, so special, specific handling needs to be added which feels clunky at best. 🤦🏼‍♂️
+- Fixed breaking changes in recent VS Code update that caused constructors to be handled incorrectly as methods, thus they were being ordered/sorted with methods.
+- Fixed a minor issue with primary constructors. I _really_ do not like them. The API treats them differently than other symbols, as with events and delegates, so special, specific handling needs to be added which feels clunky at best. 🤦🏼‍♂️
 
 #### 2025-05-10 — 0.5.6
 
--   `Output File Diagnostics` command now includes the suggested Refactors.
--   Minor changes to default settings of `Perform Quick Fixes` command.
+- `Output File Diagnostics` command now includes the suggested Refactors.
+- Minor changes to default settings of `Perform Quick Fixes` command.
 
 #### 2025-03-16 — 0.5.5
 
--   Added **Perform Quick Fixes** feature which, based on configurable Quick Fix title patterns, performs all Quick Fixes for the current file.
-    -   Added default Quick Fix title patterns.
-    -   Invoke by command (`Perform Quick Fixes`) or when _sharpening_ a file by setting `csharpen.performQuickFixesOnSharpen` to `true`. This is disabled by default.
-    -   Whether enabled or not, not invoked when processing all project files.
--   Added setting (`csharpen.delayBeforeSharpeningFile`) to indicate delay in milliseconds before _sharpening_ file when processing all project files, which has a default value.
--   Fixes issue with processing all project files when editor preview (`workbench.editor.enablePreview`) is enabled.
--   Miscellaneous improvements and fixes.
+- Added **Perform Quick Fixes** feature which, based on configurable Quick Fix title patterns, performs all Quick Fixes for the current file.
+    - Added default Quick Fix title patterns.
+    - Invoke by command (`Perform Quick Fixes`) or when _sharpening_ a file by setting `csharpen.performQuickFixesOnSharpen` to `true`. This is disabled by default.
+    - Whether enabled or not, not invoked when processing all project files.
+- Added setting (`csharpen.delayBeforeSharpeningFile`) to indicate delay in milliseconds before _sharpening_ file when processing all project files, which has a default value.
+- Fixes issue with processing all project files when editor preview (`workbench.editor.enablePreview`) is enabled.
+- Miscellaneous improvements and fixes.
 
 #### 2025-03-15 — 0.5.4
 
--   Added Coding Style rule `csharpen.convertNonPrivateFieldsToProperties` which converts non-private fields to properties.
-    -   To apply Coding Styles, use command: "Apply Coding Styles" or always apply when _sharpening_ by setting `csharpen.codingStylesEnabled` to `true`.
--   Added setting (`csharpen.delayBeforeDetectingFileDiagnostics`) to indicate delay in milliseconds before detecting File Diagnostics and Quick Fixes (to help with detecting them) when processing all project files, which has a default value.
--   Changed extension logo.
+- Added Coding Style rule `csharpen.convertNonPrivateFieldsToProperties` which converts non-private fields to properties.
+    - To apply Coding Styles, use command: "Apply Coding Styles" or always apply when _sharpening_ by setting `csharpen.codingStylesEnabled` to `true`.
+- Added setting (`csharpen.delayBeforeDetectingFileDiagnostics`) to indicate delay in milliseconds before detecting File Diagnostics and Quick Fixes (to help with detecting them) when processing all project files, which has a default value.
+- Changed extension logo.
 
 #### 2025-02-10 — 0.5.3
 
--   Added **Coding Styles** feature. Currently only one rule is available: `csharpen.useLanguageKeywordsInsteadOfFrameworkTypes`. This changes BCL/Framework types to language keywords on return and member types. Example: `System.String` to `string`, `Int32` to `int`, etc. More rules will be added in future versions.
-    -   Use command: `Apply Coding Styles` or always apply when _sharpening_ by setting `csharpen.codingStylesEnabled` to `true`.
+- Added **Coding Styles** feature. Currently only one rule is available: `csharpen.useLanguageKeywordsInsteadOfFrameworkTypes`. This changes BCL/Framework types to language keywords on return and member types. Example: `System.String` to `string`, `Int32` to `int`, etc. More rules will be added in future versions.
+    - Use command: `Apply Coding Styles` or always apply when _sharpening_ by setting `csharpen.codingStylesEnabled` to `true`.
 
 #### 2025-02-09 — 0.5.2
 
--   Minor changes in preparation for a new Coding Styles feature to be added in the next version.
+- Minor changes in preparation for a new Coding Styles feature to be added in the next version.
 
 #### 2025-02-08 — 0.5.1
 
--   On Symbol Renaming, a symbol will not be renamed if its new name already exists as a sibling symbol under the same parent. This is to prevent name conflicts.
--   Added a `PrivateConstOrFieldUnderline` Symbol Renaming configuration. There are now two available by default: `AsyncMethodSuffix` and `PrivateConstOrFieldUnderline`. Others can be added in settings, and others will be added in future versions. Note, Symbol Renaming configurations can be disabled in settings individually by settings `disabled` to `true`.
+- On Symbol Renaming, a symbol will not be renamed if its new name already exists as a sibling symbol under the same parent. This is to prevent name conflicts.
+- Added a `PrivateConstOrFieldUnderline` Symbol Renaming configuration. There are now two available by default: `AsyncMethodSuffix` and `PrivateConstOrFieldUnderline`. Others can be added in settings, and others will be added in future versions. Note, Symbol Renaming configurations can be disabled in settings individually by settings `disabled` to `true`.
 
 #### 2025-02-07 — 0.5.0
 
--   Added **Symbol Renaming** feature based on definable logic and patterns. This is disabled during removal of unused packages references. This can be enabled in settings (`csharpen.symbolRenamingEnabled` to enable on _sharpen_ and `csharpen.symbolRenaming` to define rules) and is disabled by default. Logic and patterns include: access modifier, member modifiers, symbol name pattern, return type pattern and symbol types. The renaming operation uses VS Code's built-in rename functionality thus all references in other files are renamed as well.
-    -   Example use case (and a default setting): All methods that (1) include a member modifier of `async`, (2) have a return type of `Task` or `ValueTask` (with or without generic type arguments) and (3) the symbol name does not end with `Async` are renamed to have a suffix of `Async`.
--   Fixed issue with handling `event` symbols. (Side note: I've discovered that primary constructors and events are the hardest symbols to handle because of what the VS Code API provides, next would be delegates.)
+- Added **Symbol Renaming** feature based on definable logic and patterns. This is disabled during removal of unused packages references. This can be enabled in settings (`csharpen.symbolRenamingEnabled` to enable on _sharpen_ and `csharpen.symbolRenaming` to define rules) and is disabled by default. Logic and patterns include: access modifier, member modifiers, symbol name pattern, return type pattern and symbol types. The renaming operation uses VS Code's built-in rename functionality thus all references in other files are renamed as well.
+    - Example use case (and a default setting): All methods that (1) include a member modifier of `async`, (2) have a return type of `Task` or `ValueTask` (with or without generic type arguments) and (3) the symbol name does not end with `Async` are renamed to have a suffix of `Async`.
+- Fixed issue with handling `event` symbols. (Side note: I've discovered that primary constructors and events are the hardest symbols to handle because of what the VS Code API provides, next would be delegates.)
 
 #### 2025-02-02 — 0.4.3
 
--   Added ability to skip auto-generated files based on patterns when removing unused package references. This is on by default with one defined pattern. More patterns can be added. Settings: `csharpen.skipAutoGeneratedFileWhenRemovingUnusedReferences` and `csharpen.autoGeneratedPatterns`.
--   Added a re-attempt of failed builds when removing unused package references and the user has clicked 'Continue'. This will be in a forever loop until the user clicks 'Abort' or the build is successful. This provides ability to resolve issues and verifying resolution with a successful build during the removal of unused package references.
+- Added ability to skip auto-generated files based on patterns when removing unused package references. This is on by default with one defined pattern. More patterns can be added. Settings: `csharpen.skipAutoGeneratedFileWhenRemovingUnusedReferences` and `csharpen.autoGeneratedPatterns`.
+- Added a re-attempt of failed builds when removing unused package references and the user has clicked 'Continue'. This will be in a forever loop until the user clicks 'Abort' or the build is successful. This provides ability to resolve issues and verifying resolution with a successful build during the removal of unused package references.
 
 #### 2025-02-02 — 0.4.2
 
--   Fixed edge case issue where no using directives or namespace exists in a file with a class.
+- Fixed edge case issue where no using directives or namespace exists in a file with a class.
 
 #### 2025-02-02 — 0.4.1
 
--   Minor improvements and fixes to parsing symbols, mostly relating to primary constructors.
+- Minor improvements and fixes to parsing symbols, mostly relating to primary constructors.
 
 #### 2025-02-01 — 0.4.0
 
--   **IN PREVIEW:** Feature to remove unused packages references (NuGet) of one or more projects in a solution. This also removes unused `using` directives and, now with this version, ability to _sharpen_ files.
--   Added setting (`csharpen.sharpenFilesWhenRemovingUnusedReferences`) to indicate whether to _sharpen_ files while removing unused package references. Disabled by default.
--   Added progress window when removing unused package references.
--   Added ability to cancel the process of removing unused package references.
--   Added ability for user to address issues when removing unused package references. User may continue the process or abort.
--   Added support for a workspace settings file to have per-workspace settings. This file can be generated by the command "Create CSharpen workspace settings file..." (`kokoabim.csharpen.create-workspace-settings-file`).
--   Added support for regex patterns in the `csharpen.doNotRemoveThesePackageReferences` setting.
--   Other minor improvements and fixes.
+- **IN PREVIEW:** Feature to remove unused packages references (NuGet) of one or more projects in a solution. This also removes unused `using` directives and, now with this version, ability to _sharpen_ files.
+- Added setting (`csharpen.sharpenFilesWhenRemovingUnusedReferences`) to indicate whether to _sharpen_ files while removing unused package references. Disabled by default.
+- Added progress window when removing unused package references.
+- Added ability to cancel the process of removing unused package references.
+- Added ability for user to address issues when removing unused package references. User may continue the process or abort.
+- Added support for a workspace settings file to have per-workspace settings. This file can be generated by the command "Create CSharpen workspace settings file..." (`kokoabim.csharpen.create-workspace-settings-file`).
+- Added support for regex patterns in the `csharpen.doNotRemoveThesePackageReferences` setting.
+- Other minor improvements and fixes.
 
 #### 2025-01-31 — 0.3.0
 
--   **IN PREVIEW** (i.e. can have issues though can undo): Added feature to remove unused packages references (NuGet) of one or more projects in a solution. This also removes unused `using` directives. (Command: `Remove Unused References Of Project...`)
-    -   **KNOWN ISSUE:** There is a possibility that _used_ `using` directives are incorrectly removed. If so, since all files are opened and modified, it can be undone.
-    -   Added setting (`csharpen.doNotRemoveThesePackageReferences`) to indicate what package names to skip when removing unused package references, which has a default value. A conditional removal can be indicated by appending a semicolon (`;`) and another package reference name. If the second package reference exists, then the primary package reference will not be removed.
-        -   Example: `foo;bar` will remove `foo` only if `bar` does _not_ exist. There are some package references that are not referenced in code but tooling requires them to be present.
-    -   Added setting (`csharpen.delayBeforeRemovingUnusedUsingDirectives`) to indicate delay in milliseconds before detecting and removing unused `using` directives (to help with detecting them), which has a default value.
--   Added ability to select one or more projects when sharpening all files in a project.
--   Fixed issue with parsing non-code blocks (e.g. comments) prior to symbols.
+- **IN PREVIEW** (i.e. can have issues though can undo): Added feature to remove unused packages references (NuGet) of one or more projects in a solution. This also removes unused `using` directives. (Command: `Remove Unused References Of Project...`)
+    - **KNOWN ISSUE:** There is a possibility that _used_ `using` directives are incorrectly removed. If so, since all files are opened and modified, it can be undone.
+    - Added setting (`csharpen.doNotRemoveThesePackageReferences`) to indicate what package names to skip when removing unused package references, which has a default value. A conditional removal can be indicated by appending a semicolon (`;`) and another package reference name. If the second package reference exists, then the primary package reference will not be removed.
+        - Example: `foo;bar` will remove `foo` only if `bar` does _not_ exist. There are some package references that are not referenced in code but tooling requires them to be present.
+    - Added setting (`csharpen.delayBeforeRemovingUnusedUsingDirectives`) to indicate delay in milliseconds before detecting and removing unused `using` directives (to help with detecting them), which has a default value.
+- Added ability to select one or more projects when sharpening all files in a project.
+- Fixed issue with parsing non-code blocks (e.g. comments) prior to symbols.
 
 #### 2025-01-24 — 0.2.1
 
--   Fixed issue with properly structuring parent-to-child hierarchy of symbols.
+- Fixed issue with properly structuring parent-to-child hierarchy of symbols.
 
 #### 2025-01-19 — 0.2.0
 
--   Added ability to sharpen all files in a project.
--   Added ability to output File Diagnostics for all files in a project.
+- Added ability to sharpen all files in a project.
+- Added ability to output File Diagnostics for all files in a project.
 
 #### 2025-01-18 — 0.1.0
 
--   Added feature to enforce use of file-scoped namespaces on _sharpen_. This can be toggle in settings.
--   Upgraded to beta since there has been a lot of recent changes and fixes, and I use it heavily in my daily work and find it quite stable (and useful).
+- Added feature to enforce use of file-scoped namespaces on _sharpen_. This can be toggle in settings.
+- Upgraded to beta since there has been a lot of recent changes and fixes, and I use it heavily in my daily work and find it quite stable (and useful).
 
 ## ⍺ Alpha
 
 #### 2025-01-18 — 0.0.13
 
--   Fixed issue when detecting and creating non-code blocks (e.g. comments). It was too aggressive and behavior would be that comments from down below would be pulled up to top symbols. Using a primary constructor could induce this.
+- Fixed issue when detecting and creating non-code blocks (e.g. comments). It was too aggressive and behavior would be that comments from down below would be pulled up to top symbols. Using a primary constructor could induce this.
 
 #### 2025-01-17 — 0.0.12
 
--   Fixed issue with having multiple attributes.
+- Fixed issue with having multiple attributes.
 
 #### 2025-01-17 — 0.0.11
 
--   Fixed issue with nested classes. (credit: [Kali Toste](https://github.com/Clayton-Toste))
+- Fixed issue with nested classes. (credit: [Kali Toste](https://github.com/Clayton-Toste))
 
 #### 2025-01-17 — 0.0.10
 
--   Fixed issue with character at position 0:0 being trimmed.
+- Fixed issue with character at position 0:0 being trimmed.
 
 #### 2024-12-24 — 0.0.9
 
--   Added setting to control whether sharpening can happen with a file that has diagnostic errors.
+- Added setting to control whether sharpening can happen with a file that has diagnostic errors.
 
 #### 2024-07-28 — 0.0.8
 
--   Made sure all settings have defaults.
+- Made sure all settings have defaults.
 
 #### 2024-07-27 — 0.0.7
 
--   Fixed issue with handling classes outside of namespaces.
--   Fixed issues introduced by the previous release regarding "maximum call stack size exceeded" errors.
+- Fixed issue with handling classes outside of namespaces.
+- Fixed issues introduced by the previous release regarding "maximum call stack size exceeded" errors.
 
 #### 2024-07-27 — 0.0.6
 
--   Fixed issue with handling `event` declarations.
+- Fixed issue with handling `event` declarations.
 
 #### 2024-07-11 — 0.0.5
 
--   Added output of Quick Fixes to the `Output File Diagnostics` command.
+- Added output of Quick Fixes to the `Output File Diagnostics` command.
 
 #### 2024-07-04 — 0.0.4
 
--   Fixed minor issue with handling attributes.
+- Fixed minor issue with handling attributes.
 
 #### 2024-07-03 — 0.0.3
 
--   Fixed issue with handling `using` directives which subsequently caused issues with handling single-line comments.
+- Fixed issue with handling `using` directives which subsequently caused issues with handling single-line comments.
 
 #### 2024-07-02 — 0.0.2
 
--   Added support for `Program.Main` `Task` return type (via File Filter pattern).
--   Fixed issue with handling single-line comments.
--   Fixed issue with handling attributes.
--   Updated package dependencies.
+- Added support for `Program.Main` `Task` return type (via File Filter pattern).
+- Fixed issue with handling single-line comments.
+- Fixed issue with handling attributes.
+- Updated package dependencies.
 
 #### 2024-04-22 — 0.0.1
 
--   Initial release of something functional.
+- Initial release of something functional.

@@ -17,6 +17,7 @@ export class CSharpSymbol {
 
     private body = "";
     private documentSymbol!: vscode.DocumentSymbol;
+    private eol = "\n";
     private footer = "";
     private fullName!: string;
     private header = "";
@@ -48,14 +49,14 @@ export class CSharpSymbol {
     public get hasChildren(): boolean { return this.children.length > 0; }
 
     public get innerText(): string {
-        if (!this.canHaveChildren) return `${this.header ? this.header + "\n" : ""}${this.body}${this.footer ? "\n" + this.footer : ""}`;
-        else if (this.children.length === 0) return `${this.header ? this.header + (this.header.endsWith(";") ? "" : "\n") : ""}${this.footer ? this.footer : ""}`;
+        if (!this.canHaveChildren) return `${this.header ? this.header + this.eol : ""}${this.body}${this.footer ? this.eol + this.footer : ""}`;
+        else if (this.children.length === 0) return `${this.header ? this.header + (this.header.endsWith(";") ? "" : this.eol) : ""}${this.footer ? this.footer : ""}`;
 
         const body = CSharpSymbol.join(this.children);
-        return `${this.header ? this.header + "\n" : ""}${body}${this.footer ? "\n" + this.footer : ""}`;
+        return `${this.header ? this.header + this.eol : ""}${body}${this.footer ? this.eol + this.footer : ""}`;
     }
 
-    public get isMultiLine(): boolean { return this.innerText.includes("\n"); }
+    public get isMultiLine(): boolean { return this.innerText.includes(this.eol); }
 
     public get memberName(): string { return this.parent ? `${this.parent.name}.${this.name}` : this.name; }
 
@@ -64,8 +65,8 @@ export class CSharpSymbol {
     public get returnTypeHasGenerics(): boolean { return this.returnType?.includes("<") ?? false; }
 
     public get text(): string {
-        const regionStart = this.regions.start !== undefined ? `${(this.parent?.header.endsWith("{") ? CSharpenVSCodeExtensionSettings.shared().indentation : "")}#region ${this.regions.start}\n${this.canHaveChildren || this.isMultiLine ? "\n" : ""}` : "";
-        const regionEnd = this.regions.end !== undefined ? `${this.canHaveChildren || this.isMultiLine ? "\n" : ""}\n${(this.parent?.header.endsWith("{") ? CSharpenVSCodeExtensionSettings.shared().indentation : "")}#endregion ${this.regions.end}` : "";
+        const regionStart = this.regions.start !== undefined ? `${(this.parent?.header.endsWith("{") ? CSharpenVSCodeExtensionSettings.shared().indentation : "")}#region ${this.regions.start}${this.eol}${this.canHaveChildren || this.isMultiLine ? this.eol : ""}` : "";
+        const regionEnd = this.regions.end !== undefined ? `${this.canHaveChildren || this.isMultiLine ? this.eol : ""}${this.eol}${(this.parent?.header.endsWith("{") ? CSharpenVSCodeExtensionSettings.shared().indentation : "")}#endregion ${this.regions.end}` : "";
 
         return `${regionStart}${this.innerText}${regionEnd}`;
     }
@@ -77,7 +78,7 @@ export class CSharpSymbol {
         for (let i = symbols.length - 1; i >= 0; i--) {
             const s = symbols[i];
 
-            if (s.parent) continue;
+            if (s.parent || s.type === CSharpSymbolType.namespace) continue;
 
             const namespaceSymbol = singleFileScopedNamespaceExists ? namespaceSymbols[0] : CSharpSymbol.getNamespaceByPosition(namespaceSymbols, s.position!);
             if (!namespaceSymbol) continue;
@@ -88,7 +89,7 @@ export class CSharpSymbol {
             symbols.splice(i, 1);
         }
 
-        symbols.unshift(...usingAndNamespaceSymbols);
+        symbols.unshift(...usingAndNamespaceSymbols.filter(s => s.type === CSharpSymbolType.using));
         CSharpSymbol.orderByPosition(symbols);
     }
 
@@ -97,6 +98,7 @@ export class CSharpSymbol {
 
         const symbol = new CSharpSymbol();
         symbol.documentSymbol = documentSymbol;
+        if (textDocument.eol === vscode.EndOfLine.CRLF) symbol.eol = "\r\n";
         symbol.fullName = documentSymbol.detail; // FQDN-class name; method name (not FQDN) and parameters; property name
         symbol.name = documentSymbol.name;
         symbol.nameRange = documentSymbol.selectionRange;
@@ -200,6 +202,18 @@ export class CSharpSymbol {
         // eslint-disable-next-line prefer-const
         [namespaceSymbols, strippedDocumentText] = CSharpSymbol.createNamespaceDeclarations(textDocument, strippedDocumentText, enforceFileScopedNamespace);
 
+        if (enforceFileScopedNamespace) {
+            for (let i = symbols.length - 1; i >= 0; i--) {
+                const s = symbols[i];
+                if (s.type === CSharpSymbolType.namespace
+                    && namespaceSymbols.some(ns => ns.data.isFileScoped && ns.fullName === s.fullName && ns.position!.isEqual(s.position!))) {
+                    s.header = `namespace ${s.fullName};`;
+                    s.footer = "";
+                    s.data.isFileScoped = true;
+                }
+            }
+        }
+
         return CSharpSymbol.orderByPosition(usingSymbols.concat(namespaceSymbols));
     }
 
@@ -236,7 +250,7 @@ export class CSharpSymbol {
     }
 
     private static adjustRange(textDocument: vscode.TextDocument, documentSymbolRange: vscode.Range, symbol: CSharpSymbol, documentSymbol?: vscode.DocumentSymbol): vscode.Range {
-        const previousNewLineOrBlockChars = "\n\r};";
+        const previousNewLineOrBlockChars = "\r\n};";
         const text = textDocument.getText();
         const length = text.length;
 
@@ -247,7 +261,11 @@ export class CSharpSymbol {
         }
 
         if (symbol.type !== CSharpSymbolType.primaryConstructor && (symbol.type !== CSharpSymbolType.event || text[textDocument.offsetAt(documentSymbolRange.end) - 1] === "}")) {
-            return documentSymbolRange.with({ start: textDocument.positionAt(startIndex) });
+            let endIndex = textDocument.offsetAt(documentSymbolRange.end);
+            if (text[textDocument.offsetAt(documentSymbolRange.end)] === ";") {
+                endIndex = textDocument.offsetAt(documentSymbolRange.end) + 1;
+            }
+            return documentSymbolRange.with({ start: textDocument.positionAt(startIndex), end: textDocument.positionAt(endIndex) });
         }
 
         let endIndex = 0;
@@ -282,6 +300,7 @@ export class CSharpSymbol {
             symbol.footer = "}";
         }
 
+        symbol.fullName = namespace;
         symbol.name = namespace;
         symbol.nameRange = nameRange;
         symbol.position = range.start;
@@ -320,6 +339,17 @@ export class CSharpSymbol {
 
                 strippedDocumentText = strippedDocumentText.substring(0, m.index) + declaration.replaceAll(CSharpPatterns.nonNewLine, " ") + strippedDocumentText.substring(m.index + declaration.length);
             }
+        }
+
+        if (symbols.filter(s => s.data.isFileScoped).length > 1) {
+            symbols.forEach(s => {
+                if (s.data.isFileScoped) {
+                    s.data.isFileScoped = false;
+
+                    s.header = `namespace ${s.name} {`;
+                    s.footer = "}";
+                }
+            });
         }
 
         return [symbols, strippedDocumentText];
@@ -543,17 +573,17 @@ export class CSharpSymbol {
 
     private static joinDelimiter(previous: CSharpSymbol | undefined, current: CSharpSymbol): string {
         if (!previous) {
-            if (current.parent?.type === CSharpSymbolType.namespace && current.parent.data.isFileScoped) return "\n";
+            if (current.parent?.type === CSharpSymbolType.namespace && current.parent.data.isFileScoped) return current.eol;
             else return "";
         }
 
         if (!previous.parent || !current.parent || previous.parent === current.parent) {
-            if (current.parent?.type === CSharpSymbolType.interface && previous.type === current.type) return "\n";
+            if (current.parent?.type === CSharpSymbolType.interface && previous.type === current.type) return current.eol;
 
             if (previous.type === current.type) {
                 switch (current.type) {
                     case CSharpSymbolType.using:
-                        return "\n";
+                        return current.eol;
 
                     case CSharpSymbolType.delegate:
                     case CSharpSymbolType.event:
@@ -561,12 +591,12 @@ export class CSharpSymbol {
                     case CSharpSymbolType.property:
                     case CSharpSymbolType.field:
                     case CSharpSymbolType.operator:
-                        return current.isMultiLine || previous.isMultiLine ? "\n\n" : "\n";
+                        return current.isMultiLine || previous.isMultiLine ? current.eol + current.eol : current.eol;
                 }
             }
         }
 
-        return "\n\n";
+        return current.eol + current.eol;
     }
 
     private static moveCommentsFromNonCodeblockSymbols(symbols: CSharpSymbol[]): void {
@@ -588,8 +618,8 @@ export class CSharpSymbol {
             if (stringSpans.length === 0) return nonCodeblockSymbol.isBodyWhitespace();
 
             stringSpans[stringSpans.length - 1].value = stringSpans[stringSpans.length - 1].value.trimEndLine();
-            if (isBefore) symbol.insertOnHeader(stringSpans.map(c => c.value).join("\n"));
-            else symbol.appendToFooter(stringSpans.map(c => c.value).join("\n"));
+            if (isBefore) symbol.insertOnHeader(stringSpans.map(c => c.value).join(symbol.eol));
+            else symbol.appendToFooter(stringSpans.map(c => c.value).join(symbol.eol));
 
             return nonCodeblockSymbol.isBodyWhitespace();
         }
@@ -667,7 +697,7 @@ export class CSharpSymbol {
             if (leadingStringSpansToMove.length > 0) {
                 leadingStringSpansToMove.sortBy("start");
                 leadingStringSpansToMove[leadingStringSpansToMove.length - 1].value = leadingStringSpansToMove[leadingStringSpansToMove.length - 1].value.trimEndLine();
-                symbol.insertOnHeader(leadingStringSpansToMove.map(ss => ss.value).join("\n"));
+                symbol.insertOnHeader(leadingStringSpansToMove.map(ss => ss.value).join(symbol.eol));
 
                 CSharpSymbol.removeStringSpans(symbol.link.before!, leadingStringSpansToMove);
                 if (symbol.link.before!.isBodyWhitespace()) symbol.link.before = undefined;
@@ -676,7 +706,7 @@ export class CSharpSymbol {
             if (trailingStringSpansToMove.length > 0) {
                 trailingStringSpansToMove.sortBy("start");
                 trailingStringSpansToMove[trailingStringSpansToMove.length - 1].value = trailingStringSpansToMove[trailingStringSpansToMove.length - 1].value.trimStartLine();
-                symbol.appendToFooter(trailingStringSpansToMove.map(ss => ss.value).join("\n"));
+                symbol.appendToFooter(trailingStringSpansToMove.map(ss => ss.value).join(symbol.eol));
 
                 CSharpSymbol.removeStringSpans(symbol.link.after!, trailingStringSpansToMove);
                 if (symbol.link.after!.isBodyWhitespace()) symbol.link.after = undefined;
@@ -784,14 +814,22 @@ export class CSharpSymbol {
             let openBraceIndex = -1;
             let signature: string | undefined;
 
-            if (symbol.type === CSharpSymbolType.recordClass || symbol.type === CSharpSymbolType.recordStruct || symbol.type === CSharpSymbolType.class) {
+            if (symbol.type === CSharpSymbolType.namespace
+                || symbol.type === CSharpSymbolType.recordClass
+                || symbol.type === CSharpSymbolType.recordStruct
+                || symbol.type === CSharpSymbolType.class) {
+
                 openBraceIndex = text.indexOf("{", signatureIndex);
-                if (openBraceIndex === -1) {
-                    const semicolonIndex = text.indexOf(";", signatureIndex);
-                    if (semicolonIndex !== -1) {
-                        signature = text.substring(signatureIndex, semicolonIndex).trim();
-                        symbol.appendToHeader(`${signature};`);
-                    }
+                const semicolonIndex = text.indexOf(";", signatureIndex);
+
+                if (openBraceIndex !== -1 && (semicolonIndex === -1 || openBraceIndex < semicolonIndex)) {
+                    signature = text.substring(signatureIndex, openBraceIndex).trim();
+                    symbol.appendToHeader(`${signature}${symbol.eol}{`);
+                    symbol.appendToFooter("}");
+                }
+                else if (semicolonIndex !== -1 && (openBraceIndex === -1 || semicolonIndex < openBraceIndex)) {
+                    signature = text.substring(signatureIndex, semicolonIndex).trim();
+                    symbol.appendToHeader(`${signature};`);
                 }
             }
 
@@ -800,7 +838,7 @@ export class CSharpSymbol {
                 if (openBraceIndex === -1) throw new Error("Symbol signature does not have an open brace. Please report a issue with example code.");
 
                 signature = text.substring(signatureIndex, openBraceIndex).trim();
-                symbol.appendToHeader(`${signature}\n{`);
+                symbol.appendToHeader(`${signature}${symbol.eol}{`);
                 symbol.appendToFooter("}");
             }
 
@@ -884,6 +922,15 @@ export class CSharpSymbol {
                 if (finalizerMatch?.groups?.name) name = finalizerMatch.groups.name;
                 break;
 
+            case CSharpSymbolType.constant:
+            case CSharpSymbolType.property:
+                const match1 = symbol.fullName.match(`^(?<name>[^ ]+)`);
+                if (match1?.groups?.name) {
+                    symbol.fullName = match1.groups.name;
+                    name = match1.groups.name;
+                }
+                break;
+
             case CSharpSymbolType.namespace:
             case CSharpSymbolType.delegate:
             case CSharpSymbolType.interface:
@@ -892,9 +939,14 @@ export class CSharpSymbol {
             case CSharpSymbolType.enum:
             case CSharpSymbolType.recordClass:
             case CSharpSymbolType.recordStruct:
-                const match = symbol.fullName.match(`^((?<namespace>(${CSharpPatterns.typeWithGen}\\.)*${CSharpPatterns.typeWithGen})\\.)?(?<name>${CSharpPatterns.typeWithGen})$`);
-                if (match?.groups?.name) name = match.groups.name;
-                if (match?.groups?.namespace) namespace = match.groups.namespace;
+                const match2 = symbol.fullName.match(`^((?<namespace>(${CSharpPatterns.typeWithGen}\\.)*${CSharpPatterns.typeWithGen})\\.)?(?<name>${CSharpPatterns.typeWithGen})$`);
+                if (match2?.groups?.name) name = match2.groups.name;
+                if (match2?.groups?.namespace) namespace = match2.groups.namespace;
+                break;
+
+            case CSharpSymbolType.method:
+                const match3 = symbol.name.match(`^(?<name>[^ <(]+)`);
+                if (match3?.groups?.name) name = match3.groups.name;
                 break;
         }
 
@@ -1018,9 +1070,14 @@ export class CSharpSymbol {
         for (const symbol of [...symbols].reverse()) {
             if (!symbol.range) throw new Error("Symbol does not have a range. This is not supported. Please report a issue with example code.");
 
-            let symbolText = textDocument.getText(symbol.range);
-            symbolText = symbolText.replaceAll(CSharpPatterns.nonNewLine, " ");
-            documentText = documentText.substring(0, textDocument.offsetAt(symbol.range.start)) + symbolText + documentText.substring(textDocument.offsetAt(symbol.range.end));
+            if (symbol.type === CSharpSymbolType.namespace) {
+                documentText = CSharpSymbol.stripSymbolAndCommentText(textDocument, symbol.children);
+            }
+            else {
+                let symbolText = textDocument.getText(symbol.range);
+                symbolText = symbolText.replaceAll(CSharpPatterns.nonNewLine, " ");
+                documentText = documentText.substring(0, textDocument.offsetAt(symbol.range.start)) + symbolText + documentText.substring(textDocument.offsetAt(symbol.range.end));
+            }
         }
 
         for (const re of [CSharpPatterns.multiLineCommentRegExp, CSharpPatterns.xmlCommentRegExp, CSharpPatterns.singleLineCommentRegExp]) { // [new RegExp("^[ \\t]*///.*?$", "gm")]) { //
@@ -1064,11 +1121,14 @@ export class CSharpSymbol {
                 else return CSharpSymbolType.property;
 
             case vscode.SymbolKind.Method:
-                if (documentSymbol.name === parentSymbol?.name || documentSymbol.name === ".ctor") {
+                const symbolName = documentSymbol.name.match("^[^ <(]+")?.[0];
+                const parentSymbolName = parentSymbol?.name.match("^[^ <(]+")?.[0];
+
+                if (symbolName === parentSymbolName || documentSymbol.name === ".ctor") {
                     if (parentSymbol && CSharpSymbol.isPrimaryConstructor(documentSymbol, parentSymbol.documentSymbol)) { return CSharpSymbolType.primaryConstructor; }
                     else { return CSharpSymbolType.constructor; }
                 }
-                else if (documentSymbol.name === "Finalize" && documentSymbol.detail.startsWith("~")) return CSharpSymbolType.finalizer;
+                else if ((documentSymbol.name === "Finalize" || documentSymbol.name.startsWith("~")) && documentSymbol.detail.startsWith("~")) return CSharpSymbolType.finalizer;
                 else if (documentSymbol.name === ".cctor") { return CSharpSymbolType.staticConstructor; }
                 else if (CSharpSymbol.isDelegate(textDocument, documentSymbol)) { return CSharpSymbolType.delegate; }
                 else if (CSharpSymbol.isEventMethod(documentSymbol)) { return CSharpSymbolType.none; }
@@ -1099,12 +1159,12 @@ export class CSharpSymbol {
     }
 
     private appendToFooter(text: string): void {
-        if (this.footer.length > 0 && !this.footer.endsWith("\n")) this.footer += "\n";
+        if (this.footer.length > 0 && !this.footer.endsWith(this.eol)) this.footer += this.eol;
         this.footer += text;
     }
 
     private appendToHeader(text: string): void {
-        if (this.header.length > 0 && !this.header.endsWith("\n")) this.header += "\n";
+        if (this.header.length > 0 && !this.header.endsWith(this.eol)) this.header += this.eol;
         this.header += text;
     }
 
@@ -1113,7 +1173,7 @@ export class CSharpSymbol {
     }
 
     private insertOnHeader(text: string): void {
-        if (this.header.length > 0 && !this.header.startsWith("\n")) this.header = "\n" + this.header;
+        if (this.header.length > 0 && !this.header.startsWith(this.eol)) this.header = this.eol + this.header;
         this.header = text + this.header;
     }
 

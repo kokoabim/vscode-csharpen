@@ -1,7 +1,7 @@
 {
     "name": "csharpen",
     "publisher": "spencerjames",
-    "version": "0.5.8",
+    "version": "0.5.9",
     "description": "Sharpen (organize) C# files by ordering, sorting and regionalizing symbols.",
     "displayName": "CSharpen — C# File Organizer",
     "shortName": "CSharpen",
@@ -19,7 +19,7 @@
     "license": "SEE LICENSE IN LICENSE.md",
     "icon": "./images/extension-512.png",
     "engines": {
-        "vscode": "^1.100.0"
+        "vscode": "^1.109.0"
     },
     "homepage": "https://github.com/kokoabim/vscode-csharpen/blob/main/README.md",
     "categories": [
@@ -905,6 +905,8 @@
                         "use 'var' instead",
                         "Use collection expression",
                         "Use null propagation",
+                        "Convert switch statement to expression",
+                        "Use explicitly provided tuple name",
                         "Rename to "
                     ]
                 },
@@ -935,10 +937,10 @@
     },
     "devDependencies": {
         "@types/node": "^24.0.3",
-        "@types/vscode": "^1.100.0",
+        "@types/vscode": "^1.109.0",
         "@typescript-eslint/eslint-plugin": "^8.35.0",
         "@typescript-eslint/parser": "^8.35.0",
-        "@vscode/test-cli": "^0.0.11",
+        "@vscode/test-cli": "^0.0.12",
         "@vscode/test-electron": "^2.5.2",
         "eslint": "^9.30.0",
         "typescript": "^5.8.2"
