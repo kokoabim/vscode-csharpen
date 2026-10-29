@@ -20,6 +20,11 @@
         "noImplicitOverride": true,
         "strictNullChecks": true,
         "removeComments": true,
+        "types": [
+            "node",
+            "vscode",
+            "mocha"
+        ]
     },
     "include": [
         "./src"

@@ -1,5 +1,9 @@
 ## β Beta
 
+#### 2026-10-29 — 0.5.10
+
+- Fixed issue with attribute pattern matching when sharpening files.
+
 #### 2026-03-08 — 0.5.9
 
 - Fixed issues with sharpening files related to recent VS Code update.

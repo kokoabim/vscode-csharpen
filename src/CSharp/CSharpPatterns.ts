@@ -8,7 +8,7 @@ export class CSharpPatterns {
     public static readonly tupleType = `(\\(${CSharpPatterns.typeWithGenNullArr}(,\\s*${CSharpPatterns.typeWithGenNullArr})+\\)${CSharpPatterns._nullArr})`;
     public static readonly anyType = `(${CSharpPatterns.typeWithGenNullArr}|${CSharpPatterns.tupleType})`;
 
-    public static readonly attributes = "(?<attributes>(\\s*\\[.+\\]\\s*)*)?";
+    public static readonly attributes = `(?<attributes>(\\s*((\\[\\s*${CSharpPatterns.name}\\s*\\(.*?\\)\\s*\\])|(\\[[^\\]]+\\]))\\s*)*)?`;
     public static readonly modifiers = "(?<modifiers>(\\s*(new|public|protected|private|internal|protected\\s+internal|private\\s+protected|file|static|extern|virtual|partial|abstract|sealed|override|readonly|unsafe|volatile|async|required)\\s+)*)?";
     public static readonly attributesAndModifiersRegExp = new RegExp(`${CSharpPatterns.attributes}${CSharpPatterns.modifiers}`, "gs");
 
