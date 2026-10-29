@@ -443,7 +443,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
     }
 
     private createSharpenFileCommand(): VSCodeCommand {
-        return new VSCodeCommand("kokoabim.csharpen.sharpen-file", async () => {
+        return new VSCodeCommand("kokoabim.csharpen.sharpen-file", async (batchProcessing = false) => {
             if (!await super.isWorkspaceReady()) { return; }
 
             const textEditor = await this.getTextEditor();
@@ -471,7 +471,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                         await settings.set("allowSharpenWithFileDiagnosticErrors", true, vscode.ConfigurationTarget.Global);
                     }
                 }
-                else {
+                else if (!batchProcessing) {
                     await vscode.window.showWarningMessage("File contains File Diagnostic errors though sharpening is allowed. This can be adjusted in settings.");
                 }
             }
@@ -479,8 +479,8 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
             const documentText = textEditor.document.getText();
 
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const [sharpened, removedUnusedUsingsCount, symbolsRenamed, didError, sharpenError] = await this.sharpenFile(settings, textEditor, documentText);
-            if (!sharpened || didError) return;
+            const [sharpened, removedUnusedUsingsCount, symbolsRenamed, didError, sharpenError] = await this.sharpenFile(settings, textEditor, documentText, batchProcessing);
+            if (!sharpened || didError || batchProcessing) return;
 
             let infoText = "";
             if (settings.showFileSizeDifferenceOnSharpen) {
@@ -547,7 +547,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                     const textDocument = await vscode.workspace.openTextDocument(fileUri);
                     await vscode.window.showTextDocument(textDocument, { preview: false });
                     await new Promise(f => setTimeout(f, settings.delayBeforeSharpeningFile));
-                    await vscode.commands.executeCommand("kokoabim.csharpen.sharpen-file");
+                    await vscode.commands.executeCommand("kokoabim.csharpen.sharpen-file", /* batchProcessing */ true);
                 }
             }
         });
@@ -713,7 +713,7 @@ export class CSharpenVSCodeExtension extends VSCodeExtension {
                         }
                         else if (sharpenFiles) {
                             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                            const [sharpened, removedUnusedUsingsCount, symbolsRenamedCount, didError, sharpenError] = await this.sharpenFile(settings, textEditor, textDocument.getText(), true); // NOSONAR
+                            const [sharpened, removedUnusedUsingsCount, symbolsRenamedCount, didError, sharpenError] = await this.sharpenFile(settings, textEditor, textDocument.getText(), /* batchProcessing */ true); // NOSONAR
 
                             if (didError) {
                                 if (!await askToContinueOnWarning(`Sharpening failed. You may address the failure now then continue.\n\n${sharpenError}`)) {

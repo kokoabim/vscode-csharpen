@@ -1,5 +1,9 @@
 ## β Beta
 
+#### 2026-10-29 — 0.5.11
+
+- Fixed issue with sharpening all files in a project.
+
 #### 2026-10-29 — 0.5.10
 
 - Fixed issue with attribute pattern matching when sharpening files.
